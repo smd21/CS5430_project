@@ -3,17 +3,18 @@ package server
 import (
 	"crypto/rsa"
 	"encoding/json"
-	"github.com/google/uuid"
 	"os"
-	
+
+	"github.com/google/uuid"
+
 	"crypto_utils"
 	. "types"
 )
 
-var privateKey *rsa.PrivateKey 
-var publicKey  *rsa.PublicKey
+var privateKey *rsa.PrivateKey
+var publicKey *rsa.PublicKey
 
-var name string 
+var name string
 var kvstore map[string]interface{}
 var Requests chan NetworkData
 var Responses chan NetworkData
@@ -59,7 +60,7 @@ func process(requestData NetworkData) NetworkData {
 // Parses request and handles a switch statement to
 // return the corresponding response to the request's
 // operation.
-func doOp(request *Request, response *Response)  {
+func doOp(request *Request, response *Response) {
 	response.Status = FAIL
 	switch request.Op {
 	case NOOP:
@@ -72,6 +73,8 @@ func doOp(request *Request, response *Response)  {
 		doReadVal(request, response)
 	case WRITE:
 		doWriteVal(request, response)
+	case COPY:
+		doCopy(request, response)
 	default:
 		// struct already default initialized to
 		// FAIL status
@@ -79,6 +82,17 @@ func doOp(request *Request, response *Response)  {
 }
 
 /** begin operation methods **/
+// Input: src_key s, dest_key d. Returns a response.
+// Copies the value from key s over to key d
+func doCopy(request *Request, response *Response) {
+	if _, ok := kvstore[request.Source_Key]; ok {
+		if _, ok2 := kvstore[request.Dest_Key]; ok2 {
+			kvstore[request.Dest_Key] = kvstore[request.Source_Key]
+			response.Status = OK
+		}
+	}
+}
+
 // Input: key k, value v, metaval m. Returns a response.
 // Sets the value and metaval for key k in the
 // key-value store to value v and metavalue m.
