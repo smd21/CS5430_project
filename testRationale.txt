@@ -1,0 +1,46 @@
+A correct program should:
+- Fail if the client has not yet sent a LOGIN request
+- Fail if the client has started a session and tries to login with a new uid
+- Fail if the client submits any request (other than LOGIN) after sending LOGOUT
+- Fail if the client tries to copy to/from a key not in the key-value store
+- Copy the value from src_key into dst_key on a COPY instruction
+- Echo the initial uid used to sign in for each instruction, irregardless of any user-provided uid
+
+After extending the existing code, I made sure to thoroughly test my implementation
+to ensure correct behavior for each of the scenarios above. I constructed the following
+scenarios and ran them via the interactive mode. If my program did not exhibit the stated
+correct behavior, I went back to my code and fixed the issue.
+1: I attempted to run a READ/WRITE/LOGOUT/COPY/CREATE/DELETE request before running a LOGIN request.
+Correct behavior: fail, echo an empty uid.
+2: I tried running two LOGIN instructions back to back. 
+Correct behavior: first instruction succeeds, second fails. Both echo the original uid.
+3: I tried running a READ/WRITE/LOGOUT/COPY/CREATE/DELETE request after a LOGOUT request.
+Correct behavior: THe first succeeds and echos the original uid. The second request failed and echoed an empty uid. 
+4: I tried running a LOGIN request after a LOGOUT request. 
+Correct behavior: Both succeed, the LOGOUT echos the original uid and the LOGIN echos the new uid.
+5: While logged in, I ran a COPY instruction with an invalid source key.
+Correct behavior: Fails, echos my uid.
+6: While logged in, I ran a COPY instruction with an invalid destination key.
+Correct behavior: Fails, echos my uid.
+7: While logged in, I ran a COPY instruction with a invalid destination and source keys.
+Correct behavior: Fails, echos my uid.
+8: While logged in, I ran a COPY instruction with valid source/destination keys, then requested READs to the source and destination keys
+Correct behavior: All requests succeed, both READs return the source keys original value. All requests echo my uid.
+
+These tests cover the full functionality of the added operations. Tests 1 and 2 ensure that the server only responds to a logged in user
+and does not allow a client to run more than one session at a time. Tests 3 and 4 ensure that LOGOUT ends the session
+and that the uid is properly echoed while the session is running, but not after the session ends. Tests 5 - 8
+ensure that COPY instructions behave as expected (fail if one/both keys are invalid) and correctly copy the data
+from the source to the destination.
+
+After I ensured my extensions behaved properly, I ran some tests for READ/CREATE/DELETE/WRITE
+operations while logged in to ensure that nothing was broken. To test these instructions, I ran the following
+sequence of requests:
+LOGIN (uid = Serena)
+CREATE (key = a, value = aa)
+CREATE (key = b, value = bb)
+READ (key = a)
+DELETE (key = a)
+READ (key = a)
+WRITE (key = a, val = bb)
+WRITE (key = b, val = bba)

@@ -18,6 +18,6 @@ type Request struct {
 	Val        interface{} `json:"val"`
 	Op         Operation   `json:"op"`
 	Source_Key string      `json:"src_key"`
-	Dest_Key   string      `json:"dest_key"`
+	Dest_Key   string      `json:"dst_key"`
 	Uid        string      `json:"uid"`
 }

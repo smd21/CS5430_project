@@ -19,6 +19,8 @@ var kvstore map[string]interface{}
 var Requests chan NetworkData
 var Responses chan NetworkData
 
+var session_running bool
+
 func init() {
 	privateKey = crypto_utils.NewPrivateKey()
 	publicKey = &privateKey.PublicKey
@@ -28,6 +30,7 @@ func init() {
 	}
 
 	name = uuid.NewString()
+	session_running = false
 	kvstore = make(map[string]interface{})
 	Requests = make(chan NetworkData)
 	Responses = make(chan NetworkData)
@@ -63,22 +66,33 @@ func process(requestData NetworkData) NetworkData {
 func doOp(request *Request, response *Response) {
 	response.Status = FAIL
 	response.Uid = request.Uid
-	switch request.Op {
-	case NOOP:
-		// NOTHING
-	case CREATE:
-		doCreate(request, response)
-	case DELETE:
-		doDelete(request, response)
-	case READ:
-		doReadVal(request, response)
-	case WRITE:
-		doWriteVal(request, response)
-	case COPY:
-		doCopy(request, response)
-	default:
-		// struct already default initialized to
-		// FAIL status
+	if session_running {
+		switch request.Op {
+		case NOOP:
+			// NOTHING
+		case CREATE:
+			doCreate(request, response)
+		case DELETE:
+			doDelete(request, response)
+		case READ:
+			doReadVal(request, response)
+		case WRITE:
+			doWriteVal(request, response)
+		case COPY:
+			doCopy(request, response)
+		case LOGOUT:
+			session_running = false
+			response.Status = OK
+
+		default: //LOGIN will fall through to fail
+			// struct already default initialized to
+			// FAIL status
+		}
+	} else {
+		if request.Op == LOGIN {
+			session_running = true
+			response.Status = OK
+		}
 	}
 }
 
