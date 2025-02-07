@@ -3,16 +3,18 @@ package client
 import (
 	"crypto/rsa"
 	"encoding/json"
-	"github.com/google/uuid"
 	"os"
-	
+
+	"github.com/google/uuid"
+
 	"crypto_utils"
 	. "types"
 )
 
-var name string 
+var name string
 var Requests chan NetworkData
 var Responses chan NetworkData
+var session bool
 
 var serverPublicKey *rsa.PublicKey
 

@@ -62,6 +62,7 @@ func process(requestData NetworkData) NetworkData {
 // operation.
 func doOp(request *Request, response *Response) {
 	response.Status = FAIL
+	response.Uid = request.Uid
 	switch request.Op {
 	case NOOP:
 		// NOTHING
