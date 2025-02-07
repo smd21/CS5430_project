@@ -8,6 +8,7 @@ const (
 )
 
 type Response struct {
-	Status 	Code 		 `json:"status"`
-	Val  	interface{}	 `json:"val"`
+	Status Code        `json:"status"`
+	Val    interface{} `json:"val"`
+	Uid    string      `json:"uid"`
 }

@@ -9,6 +9,8 @@ const (
 	READ
 	WRITE
 	COPY
+	LOGIN
+	LOGOUT
 )
 
 type Request struct {
@@ -17,4 +19,5 @@ type Request struct {
 	Op         Operation   `json:"op"`
 	Source_Key string      `json:"src_key"`
 	Dest_Key   string      `json:"dest_key"`
+	Uid        string      `json:"uid"`
 }
