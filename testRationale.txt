@@ -10,7 +10,7 @@ After extending the existing code, I made sure to thoroughly test my implementat
 to ensure correct behavior for each of the scenarios above. I constructed the following
 scenarios and ran them via the interactive mode. If my program did not exhibit the stated
 correct behavior, I went back to my code and fixed the issue.
-1: I attempted to run a READ/WRITE/LOGOUT/COPY/CREATE/DELETE request before running a LOGIN request.
+1: I attempted to run a READ/WRITE/LOGOUT/COPY/CREATE/DELETE/LOGOUT request before running a LOGIN request.
 Correct behavior: fail, echo an empty uid.
 2: I tried running two LOGIN instructions back to back. 
 Correct behavior: first instruction succeeds, second fails. Both echo the original uid.
@@ -35,12 +35,26 @@ from the source to the destination.
 
 After I ensured my extensions behaved properly, I ran some tests for READ/CREATE/DELETE/WRITE
 operations while logged in to ensure that nothing was broken. To test these instructions, I ran the following
-sequence of requests:
-LOGIN (uid = Serena)
-CREATE (key = a, value = aa)
-CREATE (key = b, value = bb)
-READ (key = a)
-DELETE (key = a)
-READ (key = a)
-WRITE (key = a, val = bb)
-WRITE (key = b, val = bba)
+sequence of requests (via file this time)
+{"op":"LOGIN", "uid":"Serena"}
+{"op":"CREATE", "key":"kevin", "val": "senior"}
+{"op":"CREATE", "key":"serena", "val": "junior"}
+{"op":"READ", "key":"serena"}
+{"op":"DELETE", "key":"serena"}
+{"op":"READ", "key":"serena"}
+{"op":"WRITE", "key":"serena", "val": "anything"}
+{"op":"WRITE", "key":"kevin", "val": "grad"}
+{"op":"READ", "key":"kevin"}
+{"op":"LOGOUT"}
+
+Expected Output:
+{"status":"OK","val":null,"uid":"Serena"}
+{"status":"OK","val":null,"uid":"Serena"}
+{"status":"OK","val":null,"uid":"Serena"}
+{"status":"OK","val":"junior","uid":"Serena"} //read after create returns initial value
+{"status":"OK","val":null,"uid":"Serena"}
+{"status":"FAIL","val":null,"uid":"Serena"} //read after delete fails
+{"status":"FAIL","val":null,"uid":"Serena"} //write after delete fails
+{"status":"OK","val":null,"uid":"Serena"} 
+{"status":"OK","val":"grad","uid":"Serena"} //read after write returns updated value
+{"status":"OK","val":null,"uid":"Serena"}
