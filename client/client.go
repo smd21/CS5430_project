@@ -25,6 +25,7 @@ func init() {
 	Responses = make(chan NetworkData)
 	uid = ""
 	login_attempt = 0
+	ObtainServerPublicKey()
 }
 
 func ObtainServerPublicKey() {
@@ -38,31 +39,33 @@ func ObtainServerPublicKey() {
 	}
 }
 
+// probably need to adjust the type to use our custom wrappers
 func ProcessOp(request *Request) *Response {
-	response := &Response{Status: FAIL}
+	server_resp := &Server_Message{S_Response: Response{Status: FAIL}}
 	if validateRequest(request) {
 		switch request.Op {
 		case CREATE, DELETE, READ, WRITE, COPY:
 			request.Uid = uid
-			doOp(request, response)
+			doOp(request, server_resp)
 		case LOGIN:
 			if login_attempt == 0 {
 				uid = request.Uid
 			}
 			request.Uid = uid
 			login_attempt++
-			doOp(request, response)
+			doOp(request, server_resp)
 		case LOGOUT:
 			request.Uid = uid
 			login_attempt = 0
 			uid = ""
-			doOp(request, response)
+			doOp(request, server_resp)
 		default:
 			// struct already default initialized to
 			// FAIL status
 		}
 	}
-	return response
+	// i think this is correct
+	return &server_resp.S_Response
 }
 
 func validateRequest(r *Request) bool {
@@ -80,9 +83,11 @@ func validateRequest(r *Request) bool {
 	}
 }
 
-func doOp(request *Request, response *Response) {
+func doOp(request *Request, response *Server_Message) {
 	requestBytes, _ := json.Marshal(request)
 	json.Unmarshal(sendAndReceive(NetworkData{Payload: requestBytes, Name: name}).Payload, &response)
+
+	// here, we have to unpack the response and return it
 }
 
 func sendAndReceive(toSend NetworkData) NetworkData {
