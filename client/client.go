@@ -65,7 +65,7 @@ func ProcessOp(request *Request) *Response {
 			// hmm idk if this is right
 			client_msg.Uid = uid
 
-			enc_message := genEncryptedRequest(&client_msg, false)
+			enc_message := genEncryptedRequest(&client_msg, true) // this should be true right?
 			doOp(enc_message, server_resp)
 		case LOGOUT:
 			request.Uid = uid

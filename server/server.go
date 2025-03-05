@@ -20,6 +20,7 @@ var Requests chan NetworkData
 var Responses chan NetworkData
 
 var session_running bool
+var binding_table map[string]Binding_Table_Entry // maps Client to associated entry in binding table
 
 func init() {
 	privateKey = crypto_utils.NewPrivateKey()
@@ -34,6 +35,7 @@ func init() {
 	kvstore = make(map[string]interface{})
 	Requests = make(chan NetworkData)
 	Responses = make(chan NetworkData)
+	binding_table = make(map[string]Binding_Table_Entry)
 
 	go receiveThenSend()
 }
@@ -51,11 +53,15 @@ func receiveThenSend() {
 // the corresponding operation. Returns the serialized
 // response. This method is invoked by the network.
 func process(requestData NetworkData) NetworkData {
+	var enc_request Encrypted_Request
+	json.Unmarshal(requestData.Payload, &enc_request)
+	var enc_response Encrypted_Response
 	var request Request
-	json.Unmarshal(requestData.Payload, &request)
 	var response Response
+	request := decryptAndVerify(enc_request)
 	doOp(&request, &response)
-	responseBytes, _ := json.Marshal(response)
+	enc_response := genEncryptedResponse(response)
+	responseBytes, _ := json.Marshal(enc_response)
 	return NetworkData{Payload: responseBytes, Name: name}
 }
 
@@ -81,8 +87,7 @@ func doOp(request *Request, response *Response) {
 		case COPY:
 			doCopy(request, response)
 		case LOGOUT:
-			session_running = false
-			response.Status = OK
+			doLOGOUT(request, response)
 
 		default: //LOGIN will fall through to fail
 			// struct already default initialized to
@@ -90,8 +95,7 @@ func doOp(request *Request, response *Response) {
 		}
 	} else {
 		if request.Op == LOGIN {
-			session_running = true
-			response.Status = OK
+			doLOGIN(request, response)
 		}
 	}
 }
@@ -147,4 +151,24 @@ func doWriteVal(request *Request, response *Response) {
 		kvstore[request.Key] = request.Val
 		response.Status = OK
 	}
+}
+
+func doLOGIN(request *Request, response *Response) {
+	session_running = true
+	response.Status = OK
+	//add information to binding table
+}
+
+func doLOGOUT(request *Request, response *Response) {
+	session_running = false
+	response.Status = OK
+}
+
+func decryptAndVerify(enc_request *Encrypted_Request) {
+	//if Enc_Shared_Key field isn't empty, LOGIN ==> decrypt field using public key to obtain shared key
+	//else, shared key comes from binding table
+	//use shared key to decrypt signed message into message and signature
+	//obtain public signature key from client from message to verify signature
+	//verify plaintext client and tod
+	//return decrypted request from m
 }
