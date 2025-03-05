@@ -79,9 +79,19 @@ func ProcessOp(request *Request) *Response {
 			// struct already default initialized to
 			// FAIL status
 		}
+		if !validateResponse(&client_msg, server_resp) {
+			server_resp.S_Response.Status = FAIL
+		}
 	}
+	// validate response...?
 	// i think this is correct
+
 	return &server_resp.S_Response
+}
+
+func validateResponse(original_msg *Client_Message, response *Server_Message) bool {
+
+	return false
 }
 
 func validateRequest(r *Request) bool {
