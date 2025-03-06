@@ -47,6 +47,7 @@ func ObtainServerPublicKey() {
 // probably need to adjust the type to use our custom wrappers
 func ProcessOp(request *Request) *Response {
 	server_resp := &Server_Message{S_Response: Response{Status: FAIL}}
+	var encrypted_resp Encrypted_Response
 	if validateRequest(request) {
 		client_msg := Client_Message{Client: name, Request: *request, Tod: crypto_utils.ReadClock(), Sig_Pub_Key: crypto_utils.PublicKeyToBytes(clientSigPubKey)}
 		switch request.Op {
@@ -55,7 +56,7 @@ func ProcessOp(request *Request) *Response {
 			request.Uid = uid
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, false)
-			doOp(enc_message, server_resp)
+			doOp(enc_message, &encrypted_resp)
 
 		case LOGIN:
 			uid = request.Uid
@@ -66,21 +67,24 @@ func ProcessOp(request *Request) *Response {
 			client_msg.Uid = uid
 
 			enc_message := genEncryptedRequest(&client_msg, true) // this should be true right?
-			doOp(enc_message, server_resp)
+			doOp(enc_message, &encrypted_resp)
 		case LOGOUT:
 			request.Uid = uid
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, false)
-			doOp(enc_message, server_resp)
+			doOp(enc_message, &encrypted_resp)
 			login_attempt = 0
 			uid = ""
 			sessionKey = nil
 		default:
 			// struct already default initialized to
 			// FAIL status
+			return &server_resp.S_Response
 		}
-		if !validateResponse(&client_msg, server_resp) {
-			server_resp.S_Response.Status = FAIL
+
+		if !validateResponse(&client_msg, &encrypted_resp) {
+			// if we cannot authenticate then return a FAIL
+			return &server_resp.S_Response
 		}
 	}
 	// validate response...?
@@ -89,7 +93,14 @@ func ProcessOp(request *Request) *Response {
 	return &server_resp.S_Response
 }
 
-func validateResponse(original_msg *Client_Message, response *Server_Message) bool {
+func validateResponse(original_msg *Client_Message, response *Encrypted_Response) bool {
+	decrypted_bytes, err := crypto_utils.DecryptSK(response.Enc_Signed_M, sessionKey)
+	if err != nil {
+		return false
+	}
+
+	var server_resp Server_Message
+	json.Unmarshal(decrypted_bytes, &server_resp)
 
 	return false
 }
@@ -120,7 +131,8 @@ func genEncryptedRequest(request *Client_Message, is_login bool) *Encrypted_Requ
 	var enc_req Encrypted_Request
 	msg, _ := json.Marshal(request)
 	sig := crypto_utils.Sign(msg, clientSigPrivKey)
-	enc_m_sig := crypto_utils.EncryptSK(append(msg, sig...), sessionKey)
+	m_sig_bytes, _ := json.Marshal(Signed_Client_Message{Msg: *request, Sig: sig})
+	enc_m_sig := crypto_utils.EncryptSK(m_sig_bytes, sessionKey)
 	if is_login {
 		enc_key := crypto_utils.EncryptPK(sessionKey, serverPublicKey)
 		enc_req = Encrypted_Request{Client: name, Enc_Signed_M: enc_m_sig, Enc_Shared_Key: enc_key}
@@ -131,7 +143,7 @@ func genEncryptedRequest(request *Client_Message, is_login bool) *Encrypted_Requ
 	return &enc_req
 }
 
-func doOp(request *Encrypted_Request, response *Server_Message) {
+func doOp(request *Encrypted_Request, response *Encrypted_Response) {
 	requestBytes, _ := json.Marshal(request)
 	json.Unmarshal(sendAndReceive(NetworkData{Payload: requestBytes, Name: name}).Payload, &response)
 

@@ -14,6 +14,11 @@ type Client_Message struct {
 	Sig_Pub_Key []byte    `json:"K_ds"`
 }
 
+type Signed_Client_Message struct {
+	Msg Client_Message `json:"msg"`
+	Sig []byte         `json:"sig"`
+}
+
 // Stores the client name and an encrypted signed message m. Possibly includes encrypted shared key
 // A, {m, sig}K_shared and A, {m, sig}K_shared, {K_shared}K_S in our protocol
 type Encrypted_Request struct {
