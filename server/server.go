@@ -56,16 +56,17 @@ func receiveThenSend() {
 func process(requestData NetworkData) NetworkData {
 	var enc_request Encrypted_Request
 	json.Unmarshal(requestData.Payload, &enc_request)
-	request, response := decryptAndVerify(&enc_request)
+	request, response, sk := decryptAndVerify(&enc_request)
 	// before doOp check to see if respone has already failed, means authentication failed
 	if response.Status != FAIL {
-		doOp(request, response)
+		doOp(request, response, sk)
 	}
 	sev_response.Tod = request.Tod
 	sev_response.Client = request.Client
 	sev_response.Uid = request.Uid
 	sev_response.S_Response = *response
-	enc_response := genEncryptedResponse(&sev_response)
+	is_logout := request.Request.Op == LOGOUT
+	enc_response := genEncryptedResponse(&sev_response, is_logout)
 	responseBytes, _ := json.Marshal(enc_response)
 	return NetworkData{Payload: responseBytes, Name: name}
 }
@@ -74,7 +75,7 @@ func process(requestData NetworkData) NetworkData {
 // Parses request and handles a switch statement to
 // return the corresponding response to the request's
 // operation.
-func doOp(c_msg *Client_Message, response *Response) {
+func doOp(c_msg *Client_Message, response *Response, sk []byte) {
 	response.Status = FAIL
 	response.Uid = c_msg.Request.Uid
 	if session_running {
@@ -100,7 +101,7 @@ func doOp(c_msg *Client_Message, response *Response) {
 		}
 	} else {
 		if c_msg.Request.Op == LOGIN {
-			doLOGIN(c_msg, response)
+			doLOGIN(c_msg, response, sk)
 		}
 	}
 }
@@ -158,35 +159,28 @@ func doWriteVal(request *Request, response *Response) {
 	}
 }
 
-func doLOGIN(c_msg *Client_Message, response *Response) {
+func doLOGIN(c_msg *Client_Message, response *Response, sk []byte) {
 	session_running = true
 	response.Status = OK
-	//update binding table with client Uid
-	curr_entry := binding_table[string(c_msg.Client)]
-	bind_table := Binding_Table_Entry{Uid: c_msg.Uid, Tod: c_msg.Tod, Shared_key: curr_entry.Shared_key}
+
+	bind_table := Binding_Table_Entry{Uid: c_msg.Uid, Tod: c_msg.Tod, Shared_key: sk}
 	binding_table[string(c_msg.Client)] = bind_table
 }
 
 func doLOGOUT(c_msg *Client_Message, response *Response) {
 	session_running = false
 	response.Status = OK
-	delete(binding_table, c_msg.Client)
 }
 
-func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Response) {
+func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Response, []byte) {
 	//if Enc_Shared_Key field isn't empty, LOGIN ==> decrypt field using public key to obtain shared key
 	//else, shared key comes from binding table
 	var shared_key []byte
 	if len(enc_request.Enc_Shared_Key) != 0 {
-		plaintext, err := crypto_utils.DecryptPK(enc_request.Enc_Shared_Key, privateKey)
+		key, err := crypto_utils.DecryptPK(enc_request.Enc_Shared_Key, privateKey)
 		if err == nil {
-			shared_key = plaintext
+			shared_key = key
 		}
-		// add client to binding table
-		var new_entry Binding_Table_Entry
-		new_entry.Shared_key = plaintext
-		new_entry.Tod = crypto_utils.ReadClock()
-		binding_table[string(enc_request.Client)] = new_entry
 	} else {
 		if entry, ok := binding_table[string(enc_request.Client)]; ok {
 			shared_key = entry.Shared_key
@@ -208,17 +202,14 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	sev_response.Uid = c_msg.Uid
 	//verify plaintext client and tod
 	if string(c_msg.Client) != string(enc_request.Client) {
-		println("client not same")
 		verify = false
 	}
 	entry, _ := binding_table[string(c_msg.Client)]
 	tableTod := entry.Tod
 	if c_msg.Tod.Compare(tableTod) == -1 && c_msg.Request.Op != LOGIN {
-		println("table not same")
 		verify = false
 	}
 	if c_msg.Tod.Compare(crypto_utils.ReadClock()) != -1 {
-		println("readclock not same")
 		verify = false
 	}
 
@@ -229,14 +220,17 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	} else {
 		response.Status = FAIL
 	}
-	return &c_msg, &response
+	return &c_msg, &response, shared_key
 }
 
-func genEncryptedResponse(response *Server_Message) *Encrypted_Response {
+func genEncryptedResponse(response *Server_Message, is_logout bool) *Encrypted_Response {
 	msg, _ := json.Marshal(response)
 	sig := crypto_utils.Sign(msg, privateKey)
 	m_sig, _ := json.Marshal(Signed_Server_Message{Msg: *response, Sig: sig})
-	enc_m_sig := crypto_utils.EncryptSK(m_sig, binding_table[response.Client].Shared_key)
+	enc_m_sig := crypto_utils.EncryptSK(m_sig, binding_table[string(response.Client)].Shared_key)
 	enc_res := Encrypted_Response{Server: name, Enc_Signed_M: enc_m_sig}
+	if is_logout {
+		delete(binding_table, string(response.Client))
+	}
 	return &enc_res
 }

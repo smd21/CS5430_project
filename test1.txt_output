@@ -17,3 +17,4 @@ Output: {"status":"OK","val":null,"uid":""}
 Input: {"key":"kevin","val":null,"op":"READ","src_key":"","dst_key":"","uid":""}
 Output: {"status":"OK","val":"grad","uid":""}
 Input: {"key":"","val":null,"op":"LOGOUT","src_key":"","dst_key":"","uid":""}
+Output: {"status":"OK","val":null,"uid":""}
