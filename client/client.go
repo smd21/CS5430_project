@@ -106,8 +106,11 @@ func validateResponse(original_msg *Client_Message, response *Encrypted_Response
 		return false
 	}
 	// check message stuff now
+	if !(original_msg.Client == server_resp.Msg.Client && original_msg.Uid == server_resp.Msg.Uid && original_msg.Tod == server_resp.Msg.Tod) {
+		return false
+	}
 
-	return false
+	return true
 }
 
 func validateRequest(r *Request) bool {
