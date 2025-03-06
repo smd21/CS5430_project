@@ -61,7 +61,9 @@ func process(requestData NetworkData) NetworkData {
 	if response.Status != FAIL {
 		doOp(request, response)
 	}
-	sev_response.Tod = crypto_utils.ReadClock()
+	sev_response.Tod = request.Tod
+	sev_response.Client = request.Client
+	sev_response.Uid = request.Uid
 	sev_response.S_Response = *response
 	enc_response := genEncryptedResponse(&sev_response)
 	responseBytes, _ := json.Marshal(enc_response)
@@ -159,9 +161,10 @@ func doWriteVal(request *Request, response *Response) {
 func doLOGIN(c_msg *Client_Message, response *Response) {
 	session_running = true
 	response.Status = OK
-	//add information to binding table
-	bind_table := Binding_Table_Entry{Uid: c_msg.Uid, Tod: c_msg.Tod, Sig_Pub_Key: c_msg.Sig_Pub_Key}
-	binding_table[c_msg.Client] = bind_table
+	//update binding table with client Uid
+	curr_entry := binding_table[string(c_msg.Client)]
+	bind_table := Binding_Table_Entry{Uid: c_msg.Uid, Tod: c_msg.Tod, Shared_key: curr_entry.Shared_key}
+	binding_table[string(c_msg.Client)] = bind_table
 }
 
 func doLOGOUT(c_msg *Client_Message, response *Response) {
@@ -181,12 +184,12 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 		}
 		// add client to binding table
 		var new_entry Binding_Table_Entry
-		new_entry.Sig_Pub_Key = plaintext
+		new_entry.Shared_key = plaintext
 		new_entry.Tod = crypto_utils.ReadClock()
-		binding_table[enc_request.Client] = new_entry
+		binding_table[string(enc_request.Client)] = new_entry
 	} else {
-		if entry, ok := binding_table[enc_request.Client]; ok {
-			shared_key = entry.Sig_Pub_Key
+		if entry, ok := binding_table[string(enc_request.Client)]; ok {
+			shared_key = entry.Shared_key
 		}
 	}
 	//use shared key to decrypt signed message into message and signature
@@ -204,15 +207,18 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	sev_response.Client = c_msg.Client
 	sev_response.Uid = c_msg.Uid
 	//verify plaintext client and tod
-	if c_msg.Client != enc_request.Client {
+	if string(c_msg.Client) != string(enc_request.Client) {
+		println("client not same")
 		verify = false
 	}
-	entry, _ := binding_table[c_msg.Client]
+	entry, _ := binding_table[string(c_msg.Client)]
 	tableTod := entry.Tod
-	if c_msg.Tod.Compare(tableTod) != 1 {
+	if c_msg.Tod.Compare(tableTod) == -1 && c_msg.Request.Op != LOGIN {
+		println("table not same")
 		verify = false
 	}
 	if c_msg.Tod.Compare(crypto_utils.ReadClock()) != -1 {
+		println("readclock not same")
 		verify = false
 	}
 
@@ -230,7 +236,7 @@ func genEncryptedResponse(response *Server_Message) *Encrypted_Response {
 	msg, _ := json.Marshal(response)
 	sig := crypto_utils.Sign(msg, privateKey)
 	m_sig, _ := json.Marshal(Signed_Server_Message{Msg: *response, Sig: sig})
-	enc_m_sig := crypto_utils.EncryptSK(m_sig, binding_table[response.Client].Sig_Pub_Key)
+	enc_m_sig := crypto_utils.EncryptSK(m_sig, binding_table[response.Client].Shared_key)
 	enc_res := Encrypted_Response{Server: name, Enc_Signed_M: enc_m_sig}
 	return &enc_res
 }

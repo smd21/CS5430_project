@@ -30,7 +30,6 @@ func init() {
 	login_attempt = 0
 	clientSigPrivKey = crypto_utils.NewPrivateKey()
 	clientSigPubKey = &clientSigPrivKey.PublicKey
-	ObtainServerPublicKey()
 }
 
 func ObtainServerPublicKey() {
@@ -52,20 +51,16 @@ func ProcessOp(request *Request) *Response {
 		client_msg := Client_Message{Client: name, Request: *request, Tod: crypto_utils.ReadClock(), Sig_Pub_Key: crypto_utils.PublicKeyToBytes(clientSigPubKey)}
 		switch request.Op {
 		case CREATE, DELETE, READ, WRITE, COPY:
-
 			request.Uid = uid
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, false)
 			doOp(enc_message, &encrypted_resp)
-
 		case LOGIN:
 			uid = request.Uid
 			sessionKey = crypto_utils.NewSessionKey()
 			request.Uid = uid
 			login_attempt++
-			// hmm idk if this is right
 			client_msg.Uid = uid
-
 			enc_message := genEncryptedRequest(&client_msg, true) // this should be true right?
 			doOp(enc_message, &encrypted_resp)
 		case LOGOUT:
@@ -73,24 +68,36 @@ func ProcessOp(request *Request) *Response {
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, false)
 			doOp(enc_message, &encrypted_resp)
+			// authenticate, then delete session key
+			if !validateResponse(&client_msg, &encrypted_resp) {
+				return &server_resp.S_Response
+			}
+			server_resp = decryptServer(&encrypted_resp)
 			login_attempt = 0
 			uid = ""
 			sessionKey = nil
+			return &server_resp.S_Response
 		default:
 			// struct already default initialized to
 			// FAIL status
 			return &server_resp.S_Response
 		}
-
 		if !validateResponse(&client_msg, &encrypted_resp) {
 			// if we cannot authenticate then return a FAIL
 			return &server_resp.S_Response
 		}
+		server_resp = decryptServer(&encrypted_resp)
 	}
-	// validate response...?
 	// i think this is correct
 
 	return &server_resp.S_Response
+}
+
+func decryptServer(encrypted *Encrypted_Response) *Server_Message {
+	decrypted_bytes, _ := crypto_utils.DecryptSK(encrypted.Enc_Signed_M, sessionKey)
+	var signed_server_resp Signed_Server_Message
+	json.Unmarshal(decrypted_bytes, &signed_server_resp)
+	return &signed_server_resp.Msg
 }
 
 func validateResponse(original_msg *Client_Message, response *Encrypted_Response) bool {
@@ -106,10 +113,9 @@ func validateResponse(original_msg *Client_Message, response *Encrypted_Response
 		return false
 	}
 	// check message stuff now
-	if !(original_msg.Client == server_resp.Msg.Client && original_msg.Uid == server_resp.Msg.Uid && original_msg.Tod == server_resp.Msg.Tod) {
+	if string(original_msg.Client) != string(server_resp.Msg.Client) || string(original_msg.Uid) != string(server_resp.Msg.Uid) || original_msg.Tod.GoString() != server_resp.Msg.Tod.GoString() {
 		return false
 	}
-
 	return true
 }
 
