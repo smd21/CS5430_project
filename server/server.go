@@ -72,33 +72,33 @@ func process(requestData NetworkData) NetworkData {
 // Parses request and handles a switch statement to
 // return the corresponding response to the request's
 // operation.
-func doOp(request *Request, response *Response) {
+func doOp(c_msg *Client_Message, response *Response) {
 	response.Status = FAIL
-	response.Uid = request.Uid
+	response.Uid = c_msg.Request.Uid
 	if session_running {
-		switch request.Op {
+		switch c_msg.Request.Op {
 		case NOOP:
 			// NOTHING
 		case CREATE:
-			doCreate(request, response)
+			doCreate(&c_msg.Request, response)
 		case DELETE:
-			doDelete(request, response)
+			doDelete(&c_msg.Request, response)
 		case READ:
-			doReadVal(request, response)
+			doReadVal(&c_msg.Request, response)
 		case WRITE:
-			doWriteVal(request, response)
+			doWriteVal(&c_msg.Request, response)
 		case COPY:
-			doCopy(request, response)
+			doCopy(&c_msg.Request, response)
 		case LOGOUT:
-			doLOGOUT(request, response)
+			doLOGOUT(c_msg, response)
 
 		default: //LOGIN will fall through to fail
 			// struct already default initialized to
 			// FAIL status
 		}
 	} else {
-		if request.Op == LOGIN {
-			doLOGIN(request, response)
+		if c_msg.Request.Op == LOGIN {
+			doLOGIN(c_msg, response)
 		}
 	}
 }
@@ -156,18 +156,21 @@ func doWriteVal(request *Request, response *Response) {
 	}
 }
 
-func doLOGIN(request *Request, response *Response) {
+func doLOGIN(c_msg *Client_Message, response *Response) {
 	session_running = true
 	response.Status = OK
 	//add information to binding table
+	bind_table := Binding_Table_Entry{Uid: c_msg.Uid, Tod: c_msg.Tod, Sig_Pub_Key: c_msg.Sig_Pub_Key}
+	binding_table[c_msg.Client] = bind_table
 }
 
-func doLOGOUT(request *Request, response *Response) {
+func doLOGOUT(c_msg *Client_Message, response *Response) {
 	session_running = false
 	response.Status = OK
+	delete(binding_table, c_msg.Client)
 }
 
-func decryptAndVerify(enc_request *Encrypted_Request) (*Request, *Response) {
+func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Response) {
 	//if Enc_Shared_Key field isn't empty, LOGIN ==> decrypt field using public key to obtain shared key
 	//else, shared key comes from binding table
 	var shared_key []byte
@@ -220,7 +223,7 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Request, *Response) {
 	} else {
 		response.Status = FAIL
 	}
-	return &c_msg.Request, &response
+	return &c_msg, &response
 }
 
 func genEncryptedResponse(response *Server_Message) *Encrypted_Response {
