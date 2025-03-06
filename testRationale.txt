@@ -1,3 +1,15 @@
+The testing for phase 1 of this project was conducted in two parts. First, we repeated all of the tests from phase 0 as none of the original
+functionality should be broken by our additional implementation in phase 1. This is because phase 1 only ensures that the communications between
+client and server are secure, meaning the communications should still be conducted on the user end in the same exact way as they saw in phase 0 
+since the user cannot see any of the backend encryption. Therefore, listed below is all of our tests from phase 0 and the corresponding explanations.
+The second part of testing involved creating a new network that involved attacks from a Dolev-Yao attacker. This is included in a folder called 
+attack_network. When running this network, an attack is performed every time on either the request or response. There are two types of attacks conducted
+on both requests and responses. These attacks include replay attacks which take a previously stored request/response and resend it to the client/server
+channel and attacks that modify requests/responses either before they are sent to the server or before they are received by the client. No matter what  
+the input from the user is, any request/response run from this network file should result in a FAIL.
+
+Phase 0 Testing:
+
 A correct program should:
 - Fail if the client has not yet sent a LOGIN request
 - Fail if the client has started a session and tries to login with a new uid
