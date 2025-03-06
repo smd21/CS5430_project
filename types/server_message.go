@@ -11,6 +11,11 @@ type Server_Message struct {
 	Tod        time.Time `json:"tod"`
 }
 
+type Signed_Server_Message struct {
+	Msg Server_Message `json:"msg"`
+	Sig []byte         `json:"sig"`
+}
+
 type Encrypted_Response struct {
 	Server       string `json:"server"`
 	Enc_Signed_M []byte `json:"signed_message"`

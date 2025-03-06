@@ -188,28 +188,28 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Request, *Response) {
 	}
 	//use shared key to decrypt signed message into message and signature
 	signed_m, _ := crypto_utils.DecryptSK(enc_request.Enc_Signed_M, shared_key)
-	var msg Client_Message
-	json.Unmarshal(signed_m, &msg)
-	msgLen := len(signed_m)
-	sig := signed_m[msgLen:]
-	m, _ := json.Marshal(msg)
+	var s_msg Signed_Client_Message
+	json.Unmarshal(signed_m, &s_msg)
+	sig := s_msg.Sig
+	c_msg := s_msg.Msg
+	msg, _ := json.Marshal(c_msg)
 
 	//obtain public signature key from client from message to verify signature
-	sig_pub_key, _ := crypto_utils.BytesToPublicKey(msg.Sig_Pub_Key)
-	verify := crypto_utils.Verify(sig, crypto_utils.Hash(m), sig_pub_key)
+	sig_pub_key, _ := crypto_utils.BytesToPublicKey(c_msg.Sig_Pub_Key)
+	verify := crypto_utils.Verify(sig, crypto_utils.Hash(msg), sig_pub_key)
 
-	sev_response.Client = msg.Client
-	sev_response.Uid = msg.Uid
+	sev_response.Client = c_msg.Client
+	sev_response.Uid = c_msg.Uid
 	//verify plaintext client and tod
-	if msg.Client != enc_request.Client {
+	if c_msg.Client != enc_request.Client {
 		verify = false
 	}
-	entry, _ := binding_table[msg.Client]
+	entry, _ := binding_table[c_msg.Client]
 	tableTod := entry.Tod
-	if msg.Tod.Compare(tableTod) != 1 {
+	if c_msg.Tod.Compare(tableTod) != 1 {
 		verify = false
 	}
-	if msg.Tod.Compare(crypto_utils.ReadClock()) != -1 {
+	if c_msg.Tod.Compare(crypto_utils.ReadClock()) != -1 {
 		verify = false
 	}
 
@@ -220,13 +220,14 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Request, *Response) {
 	} else {
 		response.Status = FAIL
 	}
-	return &msg.Request, &response
+	return &c_msg.Request, &response
 }
 
 func genEncryptedResponse(response *Server_Message) *Encrypted_Response {
 	msg, _ := json.Marshal(response)
 	sig := crypto_utils.Sign(msg, privateKey)
-	enc_m_sig := crypto_utils.EncryptSK(append(msg, sig...), binding_table[response.Client].Sig_Pub_Key)
+	m_sig, _ := json.Marshal(Signed_Server_Message{Msg: *response, Sig: sig})
+	enc_m_sig := crypto_utils.EncryptSK(m_sig, binding_table[response.Client].Sig_Pub_Key)
 	enc_res := Encrypted_Response{Server: name, Enc_Signed_M: enc_m_sig}
 	return &enc_res
 }

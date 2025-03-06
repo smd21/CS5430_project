@@ -99,8 +99,13 @@ func validateResponse(original_msg *Client_Message, response *Encrypted_Response
 		return false
 	}
 
-	var server_resp Server_Message
+	var server_resp Signed_Server_Message
 	json.Unmarshal(decrypted_bytes, &server_resp)
+	server_msg_bytes, _ := json.Marshal(server_resp.Msg)
+	if !crypto_utils.Verify(server_resp.Sig, crypto_utils.Hash(server_msg_bytes), serverPublicKey) {
+		return false
+	}
+	// check message stuff now
 
 	return false
 }
