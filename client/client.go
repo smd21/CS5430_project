@@ -51,20 +51,20 @@ func ProcessOp(request *Request) *Response {
 		client_msg := Client_Message{Client: name, Request: *request, Tod: crypto_utils.ReadClock(), Sig_Pub_Key: crypto_utils.PublicKeyToBytes(clientSigPubKey)}
 		switch request.Op {
 		case CREATE, DELETE, READ, WRITE, COPY:
-			request.Uid = uid
+			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, false)
 			doOp(enc_message, &encrypted_resp)
 		case LOGIN:
 			uid = request.Uid
 			sessionKey = crypto_utils.NewSessionKey()
-			request.Uid = uid
+			client_msg.Request.Uid = uid
 			login_attempt++
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, true) // this should be true right?
 			doOp(enc_message, &encrypted_resp)
 		case LOGOUT:
-			request.Uid = uid
+			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, false)
 			doOp(enc_message, &encrypted_resp)
