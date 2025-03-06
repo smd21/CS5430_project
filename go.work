@@ -7,4 +7,5 @@ use (
 	./server
 	./client
 	./network
+	./attack_network
 )
