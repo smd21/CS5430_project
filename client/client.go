@@ -80,6 +80,7 @@ func ProcessOp(request *Request) *Response {
 		default:
 			// struct already default initialized to
 			// FAIL status
+			server_resp.S_Response.Uid = uid
 			return &server_resp.S_Response
 		}
 		if !validateResponse(&client_msg, &encrypted_resp) {
