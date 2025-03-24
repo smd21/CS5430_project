@@ -10,9 +10,10 @@ import (
 	"crypto_utils"
 	. "types"
 )
-
+var SALT_SIZE = 10
 var privateKey *rsa.PrivateKey
 var publicKey *rsa.PublicKey
+var salt []byte
 
 var name string
 var kvstore map[string]interface{}
@@ -26,6 +27,7 @@ var sev_response Server_Message
 func init() {
 	privateKey = crypto_utils.NewPrivateKey()
 	publicKey = &privateKey.PublicKey
+	salt = crypto_utils.RandomBytes(SALT_SIZE)
 	publicKeyBytes := crypto_utils.PublicKeyToBytes(publicKey)
 	if err := os.WriteFile("SERVER_PUBLICKEY", publicKeyBytes, 0666); err != nil {
 		panic(err)
