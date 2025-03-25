@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"os"
 
+	"bytes"
+
 	"github.com/google/uuid"
+	"golang.org/x/crypto/argon2"
 
 	"crypto_utils"
 	. "types"
@@ -41,6 +44,7 @@ func init() {
 	Requests = make(chan NetworkData)
 	Responses = make(chan NetworkData)
 	binding_table = make(map[string]Binding_Table_Entry)
+	password_table = make(map[string]Password_Table_Entry)
 
 	go receiveThenSend()
 }
