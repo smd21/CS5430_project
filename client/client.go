@@ -77,6 +77,11 @@ func ProcessOp(request *Request) *Response {
 			uid = ""
 			sessionKey = nil
 			return &server_resp.S_Response
+		case CHANGE_PASS:
+			client_msg.Request.Uid = uid
+			client_msg.Uid = uid
+			enc_message := genEncryptedRequest(&client_msg, false)
+			doOp(enc_message, &encrypted_resp)
 		default:
 			// struct already default initialized to
 			// FAIL status
@@ -136,6 +141,8 @@ func validateRequest(r *Request) bool {
 		if login_attempt == 1 {
 			return true
 		}
+	case CHANGE_PASS:
+		return r.Old_pass != "" && r.New_pass != ""
 	default:
 		return false
 	}
