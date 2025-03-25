@@ -10,6 +10,7 @@ import (
 	"crypto_utils"
 	. "types"
 )
+
 var SALT_SIZE = 10
 var privateKey *rsa.PrivateKey
 var publicKey *rsa.PublicKey

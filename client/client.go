@@ -123,11 +123,11 @@ func validateResponse(original_msg *Client_Message, response *Encrypted_Response
 func validateRequest(r *Request) bool {
 	switch r.Op {
 	case CREATE, WRITE:
-		return r.Key != "" && r.Val != nil
+		return r.Key != "" && r.Val != nil && login_attempt != 0
 	case DELETE, READ:
 		return r.Key != ""
 	case COPY:
-		return r.Dest_Key != "" && r.Source_Key != ""
+		return r.Dest_Key != "" && r.Source_Key != "" && login_attempt != 0
 	case LOGIN:
 		if login_attempt == 0 {
 			return true
