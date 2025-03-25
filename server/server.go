@@ -22,7 +22,8 @@ var Requests chan NetworkData
 var Responses chan NetworkData
 
 var session_running bool
-var binding_table map[string]Binding_Table_Entry // maps Client to associated entry in binding table
+var binding_table map[string]Binding_Table_Entry   // maps Client to associated entry in binding table
+var password_table map[string]Password_Table_Entry // maps Client to hashed password
 var sev_response Server_Message
 
 func init() {
