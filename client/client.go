@@ -50,6 +50,10 @@ func ProcessOp(request *Request) *Response {
 	if validateRequest(request) {
 		client_msg := Client_Message{Client: name, Request: *request, Tod: crypto_utils.ReadClock(), Sig_Pub_Key: crypto_utils.PublicKeyToBytes(clientSigPubKey)}
 		switch request.Op {
+		case REGISTER:
+			client_msg.One_Time_Key = crypto_utils.NewSessionKey() // generate a one time key
+			enc_message := genEncryptedRequest(&client_msg, false)
+			doOp(enc_message, &encrypted_resp)
 		case CREATE, DELETE, READ, WRITE, COPY:
 			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
@@ -61,7 +65,7 @@ func ProcessOp(request *Request) *Response {
 			client_msg.Request.Uid = uid
 			login_attempt++
 			client_msg.Uid = uid
-			enc_message := genEncryptedRequest(&client_msg, true) // this should be true right?
+			enc_message := genEncryptedRequest(&client_msg, true)
 			doOp(enc_message, &encrypted_resp)
 		case LOGOUT:
 			client_msg.Request.Uid = uid
@@ -122,6 +126,8 @@ func validateResponse(original_msg *Client_Message, response *Encrypted_Response
 
 func validateRequest(r *Request) bool {
 	switch r.Op {
+	case REGISTER:
+		return r.Pass != "" // cannot register with an empty password
 	case CREATE, WRITE:
 		return r.Key != "" && r.Val != nil && login_attempt != 0
 	case DELETE, READ:
@@ -151,7 +157,6 @@ func genEncryptedRequest(request *Client_Message, is_login bool) *Encrypted_Requ
 	if is_login {
 		enc_key := crypto_utils.EncryptPK(sessionKey, serverPublicKey)
 		enc_req = Encrypted_Request{Client: name, Enc_Signed_M: enc_m_sig, Enc_Shared_Key: enc_key}
-
 	} else {
 		enc_req = Encrypted_Request{Client: name, Enc_Signed_M: enc_m_sig}
 	}
