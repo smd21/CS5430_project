@@ -102,6 +102,8 @@ func doOp(c_msg *Client_Message, response *Response, sk []byte) {
 			doCopy(&c_msg.Request, response)
 		case LOGOUT:
 			doLOGOUT(c_msg, response)
+		case CHANGE_PASS:
+			doCHANGE_PASS(c_msg, response)
 
 		default: //LOGIN will fall through to fail
 			// struct already default initialized to
@@ -178,6 +180,22 @@ func doLOGIN(c_msg *Client_Message, response *Response, sk []byte) {
 func doLOGOUT(c_msg *Client_Message, response *Response) {
 	session_running = false
 	response.Status = OK
+}
+
+func doCHANGE_PASS(c_msg *Client_Message, response *Response) {
+	// verify KDF(salt, old_pass) == uid.salted_pass
+	var old_pass = password_table[string(c_msg.Uid)].Hashpass
+	if bytes.Equal(old_pass, argon2.Key([]byte(c_msg.Request.Old_pass), salt, 1, 64*1024, 4, 32)) {
+		var new_pass = argon2.Key([]byte(c_msg.Request.New_pass), salt, 1, 64*1024, 4, 32)
+		var new_password_entry = Password_Table_Entry{Uid: c_msg.Uid, Hashpass: new_pass}
+		password_table[string(c_msg.Uid)] = new_password_entry
+
+		// TODO: update nonce in binding table
+	} else {
+		// TODO: if not, logout, delete current uid in session table
+
+	}
+
 }
 
 func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Response, []byte) {
