@@ -74,7 +74,8 @@ func process(requestData NetworkData) NetworkData {
 	sev_response.Uid = request.Uid
 	sev_response.S_Response = *response
 	is_logout := request.Request.Op == LOGOUT
-	enc_response := genEncryptedResponse(&sev_response, is_logout)
+	failed_changepass := (request.Request.Op == CHANGE_PASS) && (response.Status == FAIL)
+	enc_response := genEncryptedResponse(&sev_response, is_logout, failed_changepass)
 	responseBytes, _ := json.Marshal(enc_response)
 	return NetworkData{Payload: responseBytes, Name: name}
 }
@@ -189,11 +190,12 @@ func doCHANGE_PASS(c_msg *Client_Message, response *Response) {
 		var new_pass = argon2.Key([]byte(c_msg.Request.New_pass), salt, 1, 64*1024, 4, 32)
 		var new_password_entry = Password_Table_Entry{Uid: c_msg.Uid, Hashpass: new_pass}
 		password_table[string(c_msg.Uid)] = new_password_entry
+		response.Status = OK
 
-		// TODO: update nonce in binding table
+		// TODO: do you update nonces in binding table? looks like client checks if nonces are the same.
 	} else {
-		// TODO: if not, logout, delete current uid in session table
-
+		response.Status = FAIL // this deletes uid in session table like logout does
+		session_running = false
 	}
 
 }
@@ -249,13 +251,13 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	return &c_msg, &response, shared_key
 }
 
-func genEncryptedResponse(response *Server_Message, is_logout bool) *Encrypted_Response {
+func genEncryptedResponse(response *Server_Message, is_logout bool, failed_changepass bool) *Encrypted_Response {
 	msg, _ := json.Marshal(response)
 	sig := crypto_utils.Sign(msg, privateKey)
 	m_sig, _ := json.Marshal(Signed_Server_Message{Msg: *response, Sig: sig})
 	enc_m_sig := crypto_utils.EncryptSK(m_sig, binding_table[string(response.Client)].Shared_key)
 	enc_res := Encrypted_Response{Server: name, Enc_Signed_M: enc_m_sig}
-	if is_logout {
+	if is_logout || failed_changepass {
 		delete(binding_table, string(response.Client))
 	}
 	return &enc_res
