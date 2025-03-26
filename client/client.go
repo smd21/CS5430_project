@@ -3,7 +3,6 @@ package client
 import (
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"github.com/google/uuid"
@@ -52,14 +51,13 @@ func ProcessOp(request *Request) *Response {
 		client_msg := Client_Message{Client: name, Request: *request, Tod: crypto_utils.ReadClock(), Sig_Pub_Key: crypto_utils.PublicKeyToBytes(clientSigPubKey)}
 		switch request.Op {
 		case REGISTER:
-			fmt.Println("client says register")
-			client_msg.One_Time_Key = crypto_utils.NewSessionKey() // generate a one time key
-			enc_message := genEncryptedRequest(&client_msg, false, true)
+			sessionKey = crypto_utils.NewSessionKey() // generate a one time key, we can store this here as a request will never again be validated
+			enc_message := genEncryptedRequest(&client_msg, true)
 			doOp(enc_message, &encrypted_resp)
 		case CREATE, DELETE, READ, WRITE, COPY, CHANGE_PASS:
 			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
-			enc_message := genEncryptedRequest(&client_msg, false, false)
+			enc_message := genEncryptedRequest(&client_msg, false)
 			doOp(enc_message, &encrypted_resp)
 		case LOGIN:
 			uid = request.Uid
@@ -67,12 +65,12 @@ func ProcessOp(request *Request) *Response {
 			client_msg.Request.Uid = uid
 			login_attempt++
 			client_msg.Uid = uid
-			enc_message := genEncryptedRequest(&client_msg, true, false)
+			enc_message := genEncryptedRequest(&client_msg, true)
 			doOp(enc_message, &encrypted_resp)
 		case LOGOUT:
 			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
-			enc_message := genEncryptedRequest(&client_msg, false, false)
+			enc_message := genEncryptedRequest(&client_msg, false)
 			doOp(enc_message, &encrypted_resp)
 			// authenticate, then delete session key
 			if !validateResponse(&client_msg, &encrypted_resp) {
@@ -152,19 +150,15 @@ func validateRequest(r *Request) bool {
 	return false
 }
 
-func genEncryptedRequest(request *Client_Message, is_login bool, is_register bool) *Encrypted_Request {
+func genEncryptedRequest(request *Client_Message, is_login_or_register bool) *Encrypted_Request {
 	var enc_req Encrypted_Request
 	var enc_m_sig []byte
-	fmt.Println("request is still ", request.Request.Op)
 	msg, _ := json.Marshal(request)
 	sig := crypto_utils.Sign(msg, clientSigPrivKey)
 	m_sig_bytes, _ := json.Marshal(Signed_Client_Message{Msg: *request, Sig: sig})
-	if is_register {
-		enc_m_sig = crypto_utils.EncryptSK(m_sig_bytes, request.One_Time_Key)
-	} else {
-		enc_m_sig = crypto_utils.EncryptSK(m_sig_bytes, sessionKey)
-	}
-	if is_login {
+	enc_m_sig = crypto_utils.EncryptSK(m_sig_bytes, sessionKey)
+
+	if is_login_or_register {
 		enc_key := crypto_utils.EncryptPK(sessionKey, serverPublicKey)
 		enc_req = Encrypted_Request{Client: name, Enc_Signed_M: enc_m_sig, Enc_Shared_Key: enc_key}
 	} else {

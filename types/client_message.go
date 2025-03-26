@@ -7,12 +7,11 @@ import (
 // stores the request and information needed for security protocol
 // this is "m" on our protocol document
 type Client_Message struct {
-	Client       string    `json:"client"`
-	Uid          string    `json:"uid"`
-	Request      Request   `json:"request"`
-	Tod          time.Time `json:"tod"`
-	Sig_Pub_Key  []byte    `json:"K_ds"`
-	One_Time_Key []byte    `json:"K_otp"` // one time key for registration requests
+	Client      string    `json:"client"`
+	Uid         string    `json:"uid"`
+	Request     Request   `json:"request"`
+	Tod         time.Time `json:"tod"`
+	Sig_Pub_Key []byte    `json:"K_ds"`
 }
 
 type Signed_Client_Message struct {

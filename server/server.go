@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"github.com/google/uuid"
@@ -42,6 +41,7 @@ func init() {
 	Requests = make(chan NetworkData)
 	Responses = make(chan NetworkData)
 	binding_table = make(map[string]Binding_Table_Entry)
+	password_table = make(map[string]Password_Table_Entry)
 
 	go receiveThenSend()
 }
@@ -62,7 +62,6 @@ func process(requestData NetworkData) NetworkData {
 	var enc_request Encrypted_Request
 	json.Unmarshal(requestData.Payload, &enc_request)
 	request, response, sk := decryptAndVerify(&enc_request)
-	fmt.Println(request.Request)
 	// before doOp check to see if respone has already failed, means authentication failed
 	if response.Status != FAIL {
 		doOp(request, response, sk)
@@ -73,10 +72,9 @@ func process(requestData NetworkData) NetworkData {
 	sev_response.S_Response = *response
 	is_logout := request.Request.Op == LOGOUT
 	failed_changepass := (request.Request.Op == CHANGE_PASS) && (response.Status == FAIL)
-	register_key := request.One_Time_Key
 
 	is_register := request.Request.Op == REGISTER
-	enc_response := genEncryptedResponse(&sev_response, is_logout, failed_changepass, register_key, is_register)
+	enc_response := genEncryptedResponse(&sev_response, is_logout, failed_changepass, sk, is_register)
 	responseBytes, _ := json.Marshal(enc_response)
 	return NetworkData{Payload: responseBytes, Name: name}
 }
@@ -116,7 +114,7 @@ func doOp(c_msg *Client_Message, response *Response, sk []byte) {
 		case LOGIN:
 			doLOGIN(c_msg, response, sk)
 		case REGISTER:
-			doRegister(c_msg, response) // this was missing? was that intentional?
+			doRegister(c_msg, response)
 		}
 	}
 }
@@ -233,30 +231,23 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	//if Enc_Shared_Key field isn't empty, LOGIN ==> decrypt field using public key to obtain shared key
 	//else, shared key comes from binding table
 	var shared_key []byte
-	var signed_m []byte
 	var response Response
+	// check for login or register
 	if len(enc_request.Enc_Shared_Key) != 0 {
 		key, _ := crypto_utils.DecryptPK(enc_request.Enc_Shared_Key, privateKey)
 		shared_key = key
-		signed_m, _ = crypto_utils.DecryptSK(enc_request.Enc_Signed_M, shared_key)
-
 	} else {
-		if entry, ok := binding_table[string(enc_request.Client)]; ok {
-			shared_key = entry.Shared_key
-			signed_m, _ = crypto_utils.DecryptSK(enc_request.Enc_Signed_M, shared_key)
-		} else {
-			println("found a register request !")
-			signed_m, _ = crypto_utils.DecryptPK(enc_request.Enc_Signed_M, privateKey)
-
-		}
+		entry, _ := binding_table[string(enc_request.Client)]
+		shared_key = entry.Shared_key
 	}
+
 	//use shared key to decrypt signed message into message and signature
+	signed_m, _ := crypto_utils.DecryptSK(enc_request.Enc_Signed_M, shared_key)
 	var s_msg Signed_Client_Message
 	json.Unmarshal(signed_m, &s_msg)
 	sig := s_msg.Sig
 	c_msg := s_msg.Msg
 	msg, _ := json.Marshal(c_msg)
-	fmt.Println(c_msg.Request.Op)
 	//obtain public signature key from client from message to verify signature
 	sig_pub_key, err := crypto_utils.BytesToPublicKey(c_msg.Sig_Pub_Key)
 	if err != nil || sig_pub_key == nil {
@@ -303,7 +294,6 @@ func genEncryptedResponse(response *Server_Message, is_logout bool, failed_chang
 	sig := crypto_utils.Sign(msg, privateKey)
 	m_sig, _ := json.Marshal(Signed_Server_Message{Msg: *response, Sig: sig})
 	var enc_m_sig []byte
-	fmt.Println("is_register", is_register)
 	if is_register {
 		enc_m_sig = crypto_utils.EncryptSK(m_sig, register_key)
 	} else {
