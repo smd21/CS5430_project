@@ -1,11 +1,13 @@
 package server
 
 import (
+	"bytes"
 	"crypto/rsa"
 	"encoding/json"
 	"os"
 
 	"github.com/google/uuid"
+	"golang.org/x/crypto/argon2"
 
 	"crypto_utils"
 	. "types"
@@ -22,7 +24,8 @@ var Requests chan NetworkData
 var Responses chan NetworkData
 
 var session_running bool
-var binding_table map[string]Binding_Table_Entry // maps Client to associated entry in binding table
+var binding_table map[string]Binding_Table_Entry   // maps Client to associated entry in binding table
+var password_table map[string]Password_Table_Entry // maps uid to associated entry in password table
 var sev_response Server_Message
 
 func init() {
@@ -69,7 +72,8 @@ func process(requestData NetworkData) NetworkData {
 	sev_response.Uid = request.Uid
 	sev_response.S_Response = *response
 	is_logout := request.Request.Op == LOGOUT
-	enc_response := genEncryptedResponse(&sev_response, is_logout)
+	failed_changepass := (request.Request.Op == CHANGE_PASS) && (response.Status == FAIL)
+	enc_response := genEncryptedResponse(&sev_response, is_logout, failed_changepass)
 	responseBytes, _ := json.Marshal(enc_response)
 	return NetworkData{Payload: responseBytes, Name: name}
 }
@@ -97,14 +101,19 @@ func doOp(c_msg *Client_Message, response *Response, sk []byte) {
 			doCopy(&c_msg.Request, response)
 		case LOGOUT:
 			doLOGOUT(c_msg, response)
+		case CHANGE_PASS:
+			doCHANGE_PASS(c_msg, response)
 
-		default: //LOGIN will fall through to fail
+		default: //LOGIN, REGISTER will fall through to fail
 			// struct already default initialized to
 			// FAIL status
 		}
 	} else {
-		if c_msg.Request.Op == LOGIN {
+		switch c_msg.Request.Op {
+		case LOGIN:
 			doLOGIN(c_msg, response, sk)
+		case REGISTER:
+
 		}
 	}
 }
@@ -168,10 +177,49 @@ func doLOGIN(c_msg *Client_Message, response *Response, sk []byte) {
 
 	bind_table := Binding_Table_Entry{Uid: c_msg.Uid, Tod: c_msg.Tod, Shared_key: sk}
 	binding_table[string(c_msg.Client)] = bind_table
+	if entry, ok := password_table[string(c_msg.Uid)]; ok {
+		var pass = entry.Hashpass
+		if !bytes.Equal(pass, argon2.Key([]byte(c_msg.Request.Pass), salt, 1, 64*1024, 4, 32)) {
+			response.Status = FAIL
+			session_running = false
+		}
+	} else {
+		response.Status = FAIL
+		session_running = false
+	}
+
 }
 
 func doLOGOUT(c_msg *Client_Message, response *Response) {
 	session_running = false
+	response.Status = OK
+}
+func doCHANGE_PASS(c_msg *Client_Message, response *Response) {
+	// verify KDF(salt, old_pass) == uid.salted_pass
+	if entry, ok := password_table[string(c_msg.Uid)]; ok {
+		var old_pass = entry.Hashpass
+		if bytes.Equal(old_pass, argon2.Key([]byte(c_msg.Request.Old_pass), salt, 1, 64*1024, 4, 32)) {
+			var new_pass = argon2.Key([]byte(c_msg.Request.New_pass), salt, 1, 64*1024, 4, 32)
+			var new_password_entry = Password_Table_Entry{Uid: c_msg.Uid, Hashpass: new_pass}
+			password_table[string(c_msg.Uid)] = new_password_entry
+			response.Status = OK
+
+			// TODO: do you update nonces in binding table? looks like client checks if nonces are the same.
+		} else {
+			response.Status = FAIL // this deletes uid in session table like logout does
+			session_running = false
+		}
+	} else {
+		response.Status = FAIL
+		session_running = false
+	}
+
+}
+
+func doRegister(c_msg *Client_Message, response *Response) {
+	hash_pass, _ := json.Marshal(Hashed_Password{Password: c_msg.Request.Pass, Salt: salt})
+	new_pass := Password_Table_Entry{Uid: c_msg.Uid, Hashpass: crypto_utils.Hash(hash_pass)}
+	password_table[c_msg.Uid] = new_pass
 	response.Status = OK
 }
 
@@ -179,18 +227,23 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	//if Enc_Shared_Key field isn't empty, LOGIN ==> decrypt field using public key to obtain shared key
 	//else, shared key comes from binding table
 	var shared_key []byte
+	var signed_m []byte
 	if len(enc_request.Enc_Shared_Key) != 0 {
-		key, err := crypto_utils.DecryptPK(enc_request.Enc_Shared_Key, privateKey)
-		if err == nil {
-			shared_key = key
-		}
+		key, _ := crypto_utils.DecryptPK(enc_request.Enc_Shared_Key, privateKey)
+		shared_key = key
+		signed_m, _ = crypto_utils.DecryptSK(enc_request.Enc_Signed_M, shared_key)
+
 	} else {
 		if entry, ok := binding_table[string(enc_request.Client)]; ok {
 			shared_key = entry.Shared_key
+			signed_m, _ = crypto_utils.DecryptSK(enc_request.Enc_Signed_M, shared_key)
+		} else {
+			println("found a register request !")
+			signed_m, _ = crypto_utils.DecryptPK(enc_request.Enc_Signed_M, privateKey)
+
 		}
 	}
 	//use shared key to decrypt signed message into message and signature
-	signed_m, _ := crypto_utils.DecryptSK(enc_request.Enc_Signed_M, shared_key)
 	var s_msg Signed_Client_Message
 	json.Unmarshal(signed_m, &s_msg)
 	sig := s_msg.Sig
@@ -207,13 +260,21 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	if string(c_msg.Client) != string(enc_request.Client) {
 		verify = false
 	}
-	entry, _ := binding_table[string(c_msg.Client)]
-	tableTod := entry.Tod
-	if c_msg.Tod.Compare(tableTod) == -1 && c_msg.Request.Op != LOGIN {
-		verify = false
-	}
-	if c_msg.Tod.Compare(crypto_utils.ReadClock()) != -1 {
-		verify = false
+	// probably want to switch this to a switch statement when implementing rest
+	if c_msg.Request.Op != REGISTER {
+		entry, _ := binding_table[string(c_msg.Client)]
+		tableTod := entry.Tod
+		if c_msg.Tod.Compare(tableTod) == -1 && c_msg.Request.Op != LOGIN {
+			verify = false
+		}
+		if c_msg.Tod.Compare(crypto_utils.ReadClock()) != -1 {
+			verify = false
+		}
+	} else {
+		// is a register, if in password_table then fail
+		if _, ok := password_table[c_msg.Uid]; ok {
+			verify = false
+		}
 	}
 
 	//return decrypted request from m and response indicating status of authentication
@@ -226,13 +287,13 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	return &c_msg, &response, shared_key
 }
 
-func genEncryptedResponse(response *Server_Message, is_logout bool) *Encrypted_Response {
+func genEncryptedResponse(response *Server_Message, is_logout bool, failed_changepass bool) *Encrypted_Response {
 	msg, _ := json.Marshal(response)
 	sig := crypto_utils.Sign(msg, privateKey)
 	m_sig, _ := json.Marshal(Signed_Server_Message{Msg: *response, Sig: sig})
 	enc_m_sig := crypto_utils.EncryptSK(m_sig, binding_table[string(response.Client)].Shared_key)
 	enc_res := Encrypted_Response{Server: name, Enc_Signed_M: enc_m_sig}
-	if is_logout {
+	if is_logout || failed_changepass {
 		delete(binding_table, string(response.Client))
 	}
 	return &enc_res

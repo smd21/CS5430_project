@@ -22,7 +22,7 @@ type Request struct {
 	Source_Key string      `json:"src_key"`
 	Dest_Key   string      `json:"dst_key"`
 	Uid        string      `json:"uid"`
-	pass	   string	   `json:"pass"`
-	old_pass   string	   `json:"old_pass"`
-	new_pass   string	   `json:"new_pass"`
+	Pass       string      `json:"pass"`
+	Old_pass   string      `json:"old_pass"`
+	New_pass   string      `json:"new_pass"`
 }
