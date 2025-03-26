@@ -16,7 +16,6 @@ import (
 var SALT_SIZE = 10
 var privateKey *rsa.PrivateKey
 var publicKey *rsa.PublicKey
-var salt []byte
 
 var name string
 var kvstore map[string]interface{}
@@ -31,7 +30,6 @@ var sev_response Server_Message
 func init() {
 	privateKey = crypto_utils.NewPrivateKey()
 	publicKey = &privateKey.PublicKey
-	salt = crypto_utils.RandomBytes(SALT_SIZE)
 	publicKeyBytes := crypto_utils.PublicKeyToBytes(publicKey)
 	if err := os.WriteFile("SERVER_PUBLICKEY", publicKeyBytes, 0666); err != nil {
 		panic(err)
@@ -113,7 +111,7 @@ func doOp(c_msg *Client_Message, response *Response, sk []byte) {
 		case LOGIN:
 			doLOGIN(c_msg, response, sk)
 		case REGISTER:
-			doRegister(c_msg, response)// this was missing? was that intentional?
+			doRegister(c_msg, response) // this was missing? was that intentional?
 		}
 	}
 }
@@ -179,7 +177,7 @@ func doLOGIN(c_msg *Client_Message, response *Response, sk []byte) {
 	binding_table[string(c_msg.Client)] = bind_table
 	if entry, ok := password_table[string(c_msg.Uid)]; ok {
 		var pass = entry.Hashpass
-		if !bytes.Equal(pass, argon2.Key([]byte(c_msg.Request.Pass), salt, 1, 64*1024, 4, 32)) {
+		if !bytes.Equal(pass, argon2.Key([]byte(c_msg.Request.Pass), entry.Salt, 1, 64*1024, 4, 32)) {
 			response.Status = FAIL
 			session_running = false
 		}
@@ -198,9 +196,10 @@ func doCHANGE_PASS(c_msg *Client_Message, response *Response) {
 	// verify KDF(salt, old_pass) == uid.salted_pass
 	if entry, ok := password_table[string(c_msg.Uid)]; ok {
 		var old_pass = entry.Hashpass
-		if bytes.Equal(old_pass, argon2.Key([]byte(c_msg.Request.Old_pass), salt, 1, 64*1024, 4, 32)) {
-			var new_pass = argon2.Key([]byte(c_msg.Request.New_pass), salt, 1, 64*1024, 4, 32)
-			var new_password_entry = Password_Table_Entry{Uid: c_msg.Uid, Hashpass: new_pass}
+		if bytes.Equal(old_pass, argon2.Key([]byte(c_msg.Request.Old_pass), entry.Salt, 1, 64*1024, 4, 32)) {
+			new_salt := crypto_utils.RandomBytes(SALT_SIZE)
+			var new_pass = argon2.Key([]byte(c_msg.Request.New_pass), new_salt, 1, 64*1024, 4, 32) // use same salt
+			var new_password_entry = Password_Table_Entry{Hashpass: new_pass, Salt: new_salt}
 			password_table[string(c_msg.Uid)] = new_password_entry
 			response.Status = OK
 
@@ -217,9 +216,10 @@ func doCHANGE_PASS(c_msg *Client_Message, response *Response) {
 }
 
 func doRegister(c_msg *Client_Message, response *Response) {
-	hash_pass, _ := json.Marshal(Hashed_Password{Password: argon2.Key([]byte(c_msg.Request.Pass), salt, 1, 64*1024, 4, 32), Salt: salt})
-	new_pass := Password_Table_Entry{Uid: c_msg.Uid, Hashpass: hash_pass.Password}
-	
+	salt := crypto_utils.RandomBytes(SALT_SIZE)
+	hash_pass := argon2.Key([]byte(c_msg.Request.Pass), salt, 1, 64*1024, 4, 32)
+	new_pass := Password_Table_Entry{Hashpass: hash_pass, Salt: salt}
+
 	password_table[c_msg.Uid] = new_pass
 	response.Status = OK
 }
