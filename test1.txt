@@ -8,3 +8,4 @@
 {"op":"WRITE", "key":"kevin", "val": "grad"}
 {"op":"READ", "key":"kevin"}
 {"op":"LOGOUT"}
+{"op": "REGISTER", "uid": "whatever", "pass": "GoBigRed2025"}

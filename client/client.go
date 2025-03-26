@@ -52,12 +52,12 @@ func ProcessOp(request *Request) *Response {
 		switch request.Op {
 		case REGISTER:
 			client_msg.One_Time_Key = crypto_utils.NewSessionKey() // generate a one time key
-			enc_message := genEncryptedRequest(&client_msg, false)
+			enc_message := genEncryptedRequest(&client_msg, false, true)
 			doOp(enc_message, &encrypted_resp)
 		case CREATE, DELETE, READ, WRITE, COPY:
 			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
-			enc_message := genEncryptedRequest(&client_msg, false)
+			enc_message := genEncryptedRequest(&client_msg, false, false)
 			doOp(enc_message, &encrypted_resp)
 		case LOGIN:
 			uid = request.Uid
@@ -65,12 +65,12 @@ func ProcessOp(request *Request) *Response {
 			client_msg.Request.Uid = uid
 			login_attempt++
 			client_msg.Uid = uid
-			enc_message := genEncryptedRequest(&client_msg, true)
+			enc_message := genEncryptedRequest(&client_msg, true, false)
 			doOp(enc_message, &encrypted_resp)
 		case LOGOUT:
 			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
-			enc_message := genEncryptedRequest(&client_msg, false)
+			enc_message := genEncryptedRequest(&client_msg, false, false)
 			doOp(enc_message, &encrypted_resp)
 			// authenticate, then delete session key
 			if !validateResponse(&client_msg, &encrypted_resp) {
@@ -148,12 +148,17 @@ func validateRequest(r *Request) bool {
 	return false
 }
 
-func genEncryptedRequest(request *Client_Message, is_login bool) *Encrypted_Request {
+func genEncryptedRequest(request *Client_Message, is_login bool, is_register bool) *Encrypted_Request {
 	var enc_req Encrypted_Request
+	var enc_m_sig []byte
 	msg, _ := json.Marshal(request)
 	sig := crypto_utils.Sign(msg, clientSigPrivKey)
 	m_sig_bytes, _ := json.Marshal(Signed_Client_Message{Msg: *request, Sig: sig})
-	enc_m_sig := crypto_utils.EncryptSK(m_sig_bytes, sessionKey)
+	if is_register {
+		enc_m_sig = crypto_utils.EncryptSK(m_sig_bytes, request.One_Time_Key)
+	} else {
+		enc_m_sig = crypto_utils.EncryptSK(m_sig_bytes, sessionKey)
+	}
 	if is_login {
 		enc_key := crypto_utils.EncryptPK(sessionKey, serverPublicKey)
 		enc_req = Encrypted_Request{Client: name, Enc_Signed_M: enc_m_sig, Enc_Shared_Key: enc_key}
