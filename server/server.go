@@ -113,7 +113,7 @@ func doOp(c_msg *Client_Message, response *Response, sk []byte) {
 		case LOGIN:
 			doLOGIN(c_msg, response, sk)
 		case REGISTER:
-
+			doRegister(c_msg, response)// this was missing? was that intentional?
 		}
 	}
 }
@@ -217,8 +217,9 @@ func doCHANGE_PASS(c_msg *Client_Message, response *Response) {
 }
 
 func doRegister(c_msg *Client_Message, response *Response) {
-	hash_pass, _ := json.Marshal(Hashed_Password{Password: c_msg.Request.Pass, Salt: salt})
-	new_pass := Password_Table_Entry{Uid: c_msg.Uid, Hashpass: crypto_utils.Hash(hash_pass)}
+	hash_pass, _ := json.Marshal(Hashed_Password{Password: argon2.Key([]byte(c_msg.Request.Pass), salt, 1, 64*1024, 4, 32), Salt: salt})
+	new_pass := Password_Table_Entry{Uid: c_msg.Uid, Hashpass: hash_pass.Password}
+	
 	password_table[c_msg.Uid] = new_pass
 	response.Status = OK
 }
