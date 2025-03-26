@@ -54,7 +54,7 @@ func ProcessOp(request *Request) *Response {
 			client_msg.One_Time_Key = crypto_utils.NewSessionKey() // generate a one time key
 			enc_message := genEncryptedRequest(&client_msg, false, true)
 			doOp(enc_message, &encrypted_resp)
-		case CREATE, DELETE, READ, WRITE, COPY:
+		case CREATE, DELETE, READ, WRITE, COPY, CHANGE_PASS:
 			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, false, false)
@@ -142,6 +142,8 @@ func validateRequest(r *Request) bool {
 		if login_attempt == 1 {
 			return true
 		}
+	case CHANGE_PASS:
+		return r.Old_pass != "" && r.New_pass != ""
 	default:
 		return false
 	}
