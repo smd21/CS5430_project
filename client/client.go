@@ -3,6 +3,7 @@ package client
 import (
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/google/uuid"
@@ -51,6 +52,7 @@ func ProcessOp(request *Request) *Response {
 		client_msg := Client_Message{Client: name, Request: *request, Tod: crypto_utils.ReadClock(), Sig_Pub_Key: crypto_utils.PublicKeyToBytes(clientSigPubKey)}
 		switch request.Op {
 		case REGISTER:
+			fmt.Println("client says register")
 			client_msg.One_Time_Key = crypto_utils.NewSessionKey() // generate a one time key
 			enc_message := genEncryptedRequest(&client_msg, false, true)
 			doOp(enc_message, &encrypted_resp)
@@ -153,6 +155,7 @@ func validateRequest(r *Request) bool {
 func genEncryptedRequest(request *Client_Message, is_login bool, is_register bool) *Encrypted_Request {
 	var enc_req Encrypted_Request
 	var enc_m_sig []byte
+	fmt.Println("request is still ", request.Request.Op)
 	msg, _ := json.Marshal(request)
 	sig := crypto_utils.Sign(msg, clientSigPrivKey)
 	m_sig_bytes, _ := json.Marshal(Signed_Client_Message{Msg: *request, Sig: sig})

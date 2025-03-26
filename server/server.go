@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/google/uuid"
@@ -61,6 +62,7 @@ func process(requestData NetworkData) NetworkData {
 	var enc_request Encrypted_Request
 	json.Unmarshal(requestData.Payload, &enc_request)
 	request, response, sk := decryptAndVerify(&enc_request)
+	fmt.Println(request.Request)
 	// before doOp check to see if respone has already failed, means authentication failed
 	if response.Status != FAIL {
 		doOp(request, response, sk)
@@ -71,7 +73,10 @@ func process(requestData NetworkData) NetworkData {
 	sev_response.S_Response = *response
 	is_logout := request.Request.Op == LOGOUT
 	failed_changepass := (request.Request.Op == CHANGE_PASS) && (response.Status == FAIL)
-	enc_response := genEncryptedResponse(&sev_response, is_logout, failed_changepass)
+	register_key := request.One_Time_Key
+
+	is_register := request.Request.Op == REGISTER
+	enc_response := genEncryptedResponse(&sev_response, is_logout, failed_changepass, register_key, is_register)
 	responseBytes, _ := json.Marshal(enc_response)
 	return NetworkData{Payload: responseBytes, Name: name}
 }
@@ -229,6 +234,7 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	//else, shared key comes from binding table
 	var shared_key []byte
 	var signed_m []byte
+	var response Response
 	if len(enc_request.Enc_Shared_Key) != 0 {
 		key, _ := crypto_utils.DecryptPK(enc_request.Enc_Shared_Key, privateKey)
 		shared_key = key
@@ -250,9 +256,13 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	sig := s_msg.Sig
 	c_msg := s_msg.Msg
 	msg, _ := json.Marshal(c_msg)
-
+	fmt.Println(c_msg.Request.Op)
 	//obtain public signature key from client from message to verify signature
-	sig_pub_key, _ := crypto_utils.BytesToPublicKey(c_msg.Sig_Pub_Key)
+	sig_pub_key, err := crypto_utils.BytesToPublicKey(c_msg.Sig_Pub_Key)
+	if err != nil || sig_pub_key == nil {
+		response.Status = FAIL
+		return &c_msg, &response, shared_key
+	}
 	verify := crypto_utils.Verify(sig, crypto_utils.Hash(msg), sig_pub_key)
 
 	sev_response.Client = c_msg.Client
@@ -261,6 +271,7 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	if string(c_msg.Client) != string(enc_request.Client) {
 		verify = false
 	}
+
 	// probably want to switch this to a switch statement when implementing rest
 	if c_msg.Request.Op != REGISTER {
 		entry, _ := binding_table[string(c_msg.Client)]
@@ -279,7 +290,6 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	}
 
 	//return decrypted request from m and response indicating status of authentication
-	var response Response
 	if verify {
 		response.Status = OK
 	} else {
@@ -288,11 +298,17 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	return &c_msg, &response, shared_key
 }
 
-func genEncryptedResponse(response *Server_Message, is_logout bool, failed_changepass bool) *Encrypted_Response {
+func genEncryptedResponse(response *Server_Message, is_logout bool, failed_changepass bool, register_key []byte, is_register bool) *Encrypted_Response {
 	msg, _ := json.Marshal(response)
 	sig := crypto_utils.Sign(msg, privateKey)
 	m_sig, _ := json.Marshal(Signed_Server_Message{Msg: *response, Sig: sig})
-	enc_m_sig := crypto_utils.EncryptSK(m_sig, binding_table[string(response.Client)].Shared_key)
+	var enc_m_sig []byte
+	fmt.Println("is_register", is_register)
+	if is_register {
+		enc_m_sig = crypto_utils.EncryptSK(m_sig, register_key)
+	} else {
+		enc_m_sig = crypto_utils.EncryptSK(m_sig, binding_table[string(response.Client)].Shared_key)
+	}
 	enc_res := Encrypted_Response{Server: name, Enc_Signed_M: enc_m_sig}
 	if is_logout || failed_changepass {
 		delete(binding_table, string(response.Client))

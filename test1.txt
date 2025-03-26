@@ -1,4 +1,5 @@
-{"op":"LOGIN", "uid":"Serena"}
+{"uid": "Serena", "op": "REGISTER", "pass": "password"}
+{"op":"LOGIN", "uid":"Serena", "pass": "password"}
 {"op":"CREATE", "key":"kevin", "val": "senior"}
 {"op":"CREATE", "key":"serena", "val": "junior"}
 {"op":"READ", "key":"serena"}
@@ -8,4 +9,3 @@
 {"op":"WRITE", "key":"kevin", "val": "grad"}
 {"op":"READ", "key":"kevin"}
 {"op":"LOGOUT"}
-{"op": "REGISTER", "uid": "whatever", "pass": "GoBigRed2025"}
