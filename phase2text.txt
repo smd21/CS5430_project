@@ -1,9 +1,0 @@
-{"uid": "Kevin", "op": "REGISTER", "pass": "password"}
-{"uid": "Kevin", "op": "LOGIN", "pass": "password"}
-{"op": "CHANGE_PASS", "old_pass": "password", "new_pass": "newpassword"}
-{"op": "LOGOUT"}
-{"uid": "Kevin", "op": "REGISTER", "pass": "password"}
-{"uid": "Kevin", "op": "LOGIN", "pass": "password"}
-{"uid": "Kevin", "op": "LOGIN", "pass": "newpassword"}
-
-
