@@ -1,7 +1,0 @@
-Input: {"key":"","val":null,"op":"REGISTER","src_key":"","dst_key":"","uid":"Serena","pass":"password","old_pass":"","new_pass":""}
-Output: {"status":"OK","val":null,"uid":"Serena"}
-Input: {"key":"","val":null,"op":"LOGIN","src_key":"","dst_key":"","uid":"Serena","pass":"password","old_pass":"","new_pass":""}
-Output: {"status":"OK","val":null,"uid":"Serena"}
-Input: {"key":"","val":null,"op":"CHANGE_PASS","src_key":"","dst_key":"","uid":"Serena","pass":"","old_pass":"wrongpassword","new_pass":"pppassword"}
-Output: {"status":"FAIL","val":null,"uid":"Serena"}
-Input: {"key":"","val":null,"op":"LOGOUT","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}

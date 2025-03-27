@@ -170,7 +170,7 @@ func validateRequest(r *Request) bool {
 			return true
 		}
 	case CHANGE_PASS:
-		return r.Old_pass != "" && r.New_pass != ""
+		return r.Old_pass != "" && r.New_pass != "" && logged_in
 	default:
 		return false
 	}

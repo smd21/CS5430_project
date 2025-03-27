@@ -1,6 +1,0 @@
-Input: {"key":"","val":null,"op":"REGISTER","src_key":"","dst_key":"","uid":"Mika","pass":"password123","old_pass":"","new_pass":""}
-Output: {"status":"OK","val":null,"uid":"Mika"}
-Input: {"key":"","val":null,"op":"LOGIN","src_key":"","dst_key":"","uid":"Mika","pass":"password123","old_pass":"","new_pass":""}
-Output: {"status":"OK","val":null,"uid":"Mika"}
-Input: {"key":"","val":null,"op":"REGISTER","src_key":"","dst_key":"","uid":"mus1cl0v3r","pass":"bachtothefuture","old_pass":"","new_pass":""}
-Output: {"status":"FAIL","val":null,"uid":"Mika"}
