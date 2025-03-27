@@ -51,6 +51,7 @@ func ProcessOp(request *Request) *Response {
 		client_msg := Client_Message{Client: name, Request: *request, Tod: crypto_utils.ReadClock(), Sig_Pub_Key: crypto_utils.PublicKeyToBytes(clientSigPubKey)}
 		switch request.Op {
 		case REGISTER:
+			client_msg.Uid = request.Uid
 			sessionKey = crypto_utils.NewSessionKey() // generate a one time key, we can store this here as a request will never again be validated
 			enc_message := genEncryptedRequest(&client_msg, true)
 			doOp(enc_message, &encrypted_resp)
@@ -99,10 +100,10 @@ func ProcessOp(request *Request) *Response {
 			return &server_resp.S_Response
 		}
 		server_resp = decryptServer(&encrypted_resp)
-		server_resp.S_Response.Uid = uid
+	} else {
+		server_resp.S_Response.Uid = uid // set if returns fail
 	}
 	// i think this is correct
-
 	return &server_resp.S_Response
 }
 
@@ -135,7 +136,7 @@ func validateResponse(original_msg *Client_Message, response *Encrypted_Response
 func validateRequest(r *Request) bool {
 	switch r.Op {
 	case REGISTER:
-		return r.Pass != "" // cannot register with an empty password
+		return r.Pass != "" && !logged_in // cannot register with an empty password
 	case CREATE, WRITE:
 		return r.Key != "" && r.Val != nil && logged_in
 	case DELETE, READ:

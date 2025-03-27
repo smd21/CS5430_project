@@ -1,0 +1,28 @@
+{"uid": "Serena", "op": "REGISTER", "pass": "password"}
+{"op": "LOGIN", "uid": "Serena", "pass": "password"}
+{"key": "CS5430", "op": "CREATE", "val": "security"}
+{"key": "CS5430", "op": "READ"}
+{"key": "CS5430", "op": "CREATE", "val": "security1"}
+{"key": "CS5430", "op": "READ"}
+{"key": "CS4701", "op": "READ"}
+{"key": "CS4701", "op": "WRITE", "val": "ai prac"}
+{"key": "CS4701", "op": "DELETE"}
+{"key": "CS4701", "op": "CREATE", "val": "ai prac"}
+{"key": "CS4701", "op": "WRITE", "val": "no security"}
+{"key": "CS4701", "op": "READ"}
+{"src_key": "CS5430", "op": "COPY", "dst_key": "CS4701"}
+{"key": "CS4701", "op": "READ"}
+{"src_key": "AEM3100", "op": "COPY", "dst_key": "CS4701"}
+{"key": "CS4701", "op": "READ"}
+{"src_key": "CS5430", "op": "COPY", "dst_key": "AEM3100"}
+{"key": "CS5430", "op": "READ"}
+{"src_key": "PUBPOL", "op": "COPY", "dst_key": "AEM3100"}
+{"key": "CS4701", "op": "DELETE"}
+{"key": "CS4701", "op": "READ"}
+{"key": "CS5430", "op": "CREATE", "val": "security"}
+{"key": "CS5430", "op": "READ", "uid": "finkman"}
+{"op": "LOGOUT"}
+{"uid": "finkman", "op": "LOGIN"}
+{"uid": "mika", "op": "LOGIN"}
+{"op": "LOGOUT"}
+{"op": "LOGOUT"}

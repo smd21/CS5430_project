@@ -1,3 +1,63 @@
+Phase 2 Testing:
+Our testing for phase two built off of the work we did in the previous parts. First,
+we created a series of unit tests that explored all functionality of the new requests.
+This is listed as follows:
+- A REGISTER request FAILS if it is sent during a currently running session
+- A REGISTER request FAILS if the user is already registered
+- All non-REGISTER requests FAIL if the user is not registered
+- A LOGIN request FAILS if it contains the wrong password
+- A CHANGEPASS request FAILS and ENDS the session if the old password is incorrectly entered *
+
+Our tests are as follows:
+1. Successful normal path
+{“uid”: “Serena”, “op”: “REGISTER”, “pass”: “password”}
+{“uid”: “Serena”, “op”: “LOGIN”, “pass”: “password”}
+// phase 0 tests - should return OK
+{“op”: “LOGOUT”}
+
+2. Successful change password path + checking that the password does indeed change
+{“uid”: “Kevin”, “op”: “REGISTER”, “pass”: “password”}
+{“uid”: “Kevin”, “op”: “LOGIN”, “pass”: “password”}
+{“op”: “CHANGE_PASS”, “old_pass”: “password”, “new_pass”: “newpassword”}
+// phase 0 tests - should return OK
+{“op”: “LOGOUT”}
+{“uid”: “Kevin”, “op”: “REGISTER”, “pass”: “password”} // FAIL - verify user still exists
+{“uid”: “Kevin”, “op”: “LOGIN”, “pass”: “password”} // FAIL - verify old password is gone
+{“uid”: “Kevin”, “op”: “LOGIN”, “pass”: “newpassword”} // OK
+
+3. Authenticate without registration should FAIL
+{“uid”: “Marcus”, “op”: “LOGIN”, “pass”: “password”} // FAIL
+
+4. Re-registering should FAIL
+{“uid”: “Mika”, “op”: “REGISTER”, “pass”: “password123”} // OK
+{“uid”: “Mika”, “op”: “REGISTER”, “pass”: “password456”} // FAIL
+
+5. Repeated LOGIN should FAIL
+{“uid”: “Sam”, “op”: “REGISTER”, “pass”: “spam”}
+{“uid”: “Sam”, “op”: “LOGIN”, “pass”: “spam”}
+{“uid”: “Sam”, “op”: “LOGIN”, “pass”: “spam”} // FAIL - Sam is already in active session
+
+6. LOGIN with incorrect password should FAIL
+{“uid”: “Jianna”, “op”: “REGISTER”, “pass”: “sheep”}
+{“uid”: “Jianna”, “op”: “LOGIN”, “pass”: “notsheep”} // FAIL
+
+7. CHANGE_PASS with an incorrect old_pass should FAIL and EXIT
+{“uid”: “Laura”, “op”: “REGISTER”, “pass”: “password”}
+{“uid”: “Laura”, “op”: “LOGIN”, “pass”: “password”}
+{“op”: “CHANGE_PASS”, “old_pass”: “wrongpassword”, “new_pass”: “newpassword”} // FAIL
+{“op”: “LOGOUT”} // FAIL -> session ended
+{“uid”: “Laura”, “op”: “LOGIN”, “pass”: “newpassword”} // FAIL, password did not change
+
+8. Registering another user during an active session should FAIL
+{"uid": "Mika", "op": "REGISTER", "pass": "password123"} // OK
+{"uid": "Mika", "op": "LOGIN", "pass": "password123"}
+{"uid": "mus1cl0v3r", "op": "REGISTER", "pass": "bachtothefuture"} // FAIL
+
+* We decided on this behavior as an incorrect old password could indicate that the users session
+has been taken over by a malicious actor, so we should block all further requests and make
+them reauthenticate.
+
+Phase 1 Testing:
 The testing for phase 1 of this project was conducted in two parts. First, we repeated all of the tests from phase 0 as none of the original
 functionality should be broken by our additional implementation in phase 1. This is because phase 1 only ensures that the communications between
 client and server are secure, meaning the communications should still be conducted on the user end in the same exact way as they saw in phase 0 
@@ -12,7 +72,7 @@ Phase 0 Testing:
 
 A correct program should:
 - Fail if the client has not yet sent a LOGIN request
-- Fail if the client has started a session and tries to login with a new uid
+- Fail if the client has started a session and tries to LOGIN again
 - Fail if the client submits any request (other than LOGIN) after sending LOGOUT
 - Fail if the client tries to copy to/from a key not in the key-value store
 - Copy the value from src_key into dst_key on a COPY instruction

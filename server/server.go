@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"encoding/json"
-	"fmt"
 	"os"
 
 	"github.com/google/uuid"
@@ -73,7 +72,6 @@ func process(requestData NetworkData) NetworkData {
 	sev_response.S_Response = *response
 	is_logout := request.Request.Op == LOGOUT
 	failed_changepass := (request.Request.Op == CHANGE_PASS) && (response.Status == FAIL)
-
 	is_register := request.Request.Op == REGISTER
 	enc_response := genEncryptedResponse(&sev_response, is_logout, failed_changepass, sk, is_register)
 	responseBytes, _ := json.Marshal(enc_response)
@@ -180,9 +178,6 @@ func doLOGIN(c_msg *Client_Message, response *Response, sk []byte) {
 	binding_table[string(c_msg.Client)] = bind_table
 	if entry, ok := password_table[string(c_msg.Uid)]; ok {
 		var pass = entry.Hashpass
-		fmt.Println("Plaintext entered password is ", c_msg.Request.Pass)
-		fmt.Println("Right password is ", pass)
-		fmt.Println("entererd password is ", argon2.Key([]byte(c_msg.Request.Pass), entry.Salt, 1, 64*1024, 4, 32))
 		if !bytes.Equal(pass, argon2.Key([]byte(c_msg.Request.Pass), entry.Salt, 1, 64*1024, 4, 32)) {
 			response.Status = FAIL
 			session_running = false
@@ -197,7 +192,6 @@ func doLOGIN(c_msg *Client_Message, response *Response, sk []byte) {
 func doRegister(c_msg *Client_Message, response *Response) {
 	if _, ok := password_table[string(c_msg.Request.Uid)]; ok {
 		response.Status = FAIL
-		session_running = false
 	} else {
 		salt := crypto_utils.RandomBytes(SALT_SIZE)
 		hash_pass := argon2.Key([]byte(c_msg.Request.Pass), salt, 1, 64*1024, 4, 32)
@@ -219,11 +213,9 @@ func doCHANGE_PASS(c_msg *Client_Message, response *Response) {
 		if bytes.Equal(old_pass, argon2.Key([]byte(c_msg.Request.Old_pass), entry.Salt, 1, 64*1024, 4, 32)) {
 			// fmt.Println(string(c_msg.Uid))
 			new_salt := crypto_utils.RandomBytes(SALT_SIZE)
-			fmt.Println(c_msg.Request.New_pass)
 			var new_pass = argon2.Key([]byte(c_msg.Request.New_pass), new_salt, 1, 64*1024, 4, 32) // use same salt
 			var new_password_entry = Password_Table_Entry{Hashpass: new_pass, Salt: new_salt}
 			password_table[string(c_msg.Uid)] = new_password_entry
-			fmt.Println(new_password_entry)
 			response.Status = OK
 
 			// TODO: do you update nonces in binding table? looks like client checks if nonces are the same.
@@ -267,8 +259,6 @@ func decryptAndVerify(enc_request *Encrypted_Request) (*Client_Message, *Respons
 	}
 	verify := crypto_utils.Verify(sig, crypto_utils.Hash(msg), sig_pub_key)
 
-	sev_response.Client = c_msg.Client
-	sev_response.Uid = c_msg.Uid
 	//verify plaintext client and tod
 	if string(c_msg.Client) != string(enc_request.Client) {
 		verify = false

@@ -1,0 +1,3 @@
+{"uid": "Mika", "op": "REGISTER", "pass": "password123"}
+{"uid": "Mika", "op": "LOGIN", "pass": "password123"}
+{"uid": "mus1cl0v3r", "op": "REGISTER", "pass": "bachtothefuture"}

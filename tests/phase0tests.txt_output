@@ -1,0 +1,56 @@
+Input: {"key":"","val":null,"op":"REGISTER","src_key":"","dst_key":"","uid":"Serena","pass":"password","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":null,"uid":""}
+Input: {"key":"","val":null,"op":"LOGIN","src_key":"","dst_key":"","uid":"Serena","pass":"password","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":null,"uid":"Serena"}
+Input: {"key":"CS5430","val":"security","op":"CREATE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":null,"uid":"Serena"}
+Input: {"key":"CS5430","val":null,"op":"READ","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":"security","uid":"Serena"}
+Input: {"key":"CS5430","val":"security1","op":"CREATE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"Serena"}
+Input: {"key":"CS5430","val":null,"op":"READ","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":"security","uid":"Serena"}
+Input: {"key":"CS4701","val":null,"op":"READ","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"Serena"}
+Input: {"key":"CS4701","val":"ai prac","op":"WRITE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"Serena"}
+Input: {"key":"CS4701","val":null,"op":"DELETE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"Serena"}
+Input: {"key":"CS4701","val":"ai prac","op":"CREATE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":null,"uid":"Serena"}
+Input: {"key":"CS4701","val":"no security","op":"WRITE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":null,"uid":"Serena"}
+Input: {"key":"CS4701","val":null,"op":"READ","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":"no security","uid":"Serena"}
+Input: {"key":"","val":null,"op":"COPY","src_key":"CS5430","dst_key":"CS4701","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":null,"uid":"Serena"}
+Input: {"key":"CS4701","val":null,"op":"READ","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":"security","uid":"Serena"}
+Input: {"key":"","val":null,"op":"COPY","src_key":"AEM3100","dst_key":"CS4701","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"Serena"}
+Input: {"key":"CS4701","val":null,"op":"READ","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":"security","uid":"Serena"}
+Input: {"key":"","val":null,"op":"COPY","src_key":"CS5430","dst_key":"AEM3100","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"Serena"}
+Input: {"key":"CS5430","val":null,"op":"READ","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":"security","uid":"Serena"}
+Input: {"key":"","val":null,"op":"COPY","src_key":"PUBPOL","dst_key":"AEM3100","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"Serena"}
+Input: {"key":"CS4701","val":null,"op":"DELETE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":null,"uid":"Serena"}
+Input: {"key":"CS4701","val":null,"op":"READ","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"Serena"}
+Input: {"key":"CS5430","val":"security","op":"CREATE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"Serena"}
+Input: {"key":"CS5430","val":null,"op":"READ","src_key":"","dst_key":"","uid":"finkman","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":"security","uid":"Serena"}
+Input: {"key":"","val":null,"op":"LOGOUT","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"OK","val":null,"uid":"Serena"}
+Input: {"key":"","val":null,"op":"LOGIN","src_key":"","dst_key":"","uid":"finkman","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"finkman"}
+Input: {"key":"","val":null,"op":"LOGIN","src_key":"","dst_key":"","uid":"mika","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"finkman"}
+Input: {"key":"","val":null,"op":"LOGOUT","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"finkman"}
+Input: {"key":"","val":null,"op":"LOGOUT","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}
+Output: {"status":"FAIL","val":null,"uid":"finkman"}
