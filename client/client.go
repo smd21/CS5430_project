@@ -105,7 +105,9 @@ func ProcessOp(request *Request) *Response {
 		server_resp.S_Response.Uid = uid // set if returns fail
 		//fmt.Println("client 106 set uid to ", uid)
 	}
-	// i think this is correct
+	if server_resp.S_Response.Uid == "" {
+		server_resp.S_Response.Uid = server_resp.Uid
+	}
 	return &server_resp.S_Response
 }
 
