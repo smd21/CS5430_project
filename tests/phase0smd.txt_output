@@ -1,5 +1,5 @@
 Input: {"key":"","val":null,"op":"REGISTER","src_key":"","dst_key":"","uid":"Serena","pass":"password","old_pass":"","new_pass":""}
-Output: {"status":"OK","val":null,"uid":""}
+Output: {"status":"OK","val":null,"uid":"Serena"}
 Input: {"key":"","val":null,"op":"LOGIN","src_key":"","dst_key":"","uid":"Serena","pass":"password","old_pass":"","new_pass":""}
 Output: {"status":"OK","val":null,"uid":"Serena"}
 Input: {"key":"kevin","val":"senior","op":"CREATE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":""}

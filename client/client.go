@@ -93,6 +93,7 @@ func ProcessOp(request *Request) *Response {
 			// struct already default initialized to
 			// FAIL status
 			server_resp.S_Response.Uid = uid
+			//fmt.Println("client 95 set uid to ", uid)
 			return &server_resp.S_Response
 		}
 		if !validateResponse(&client_msg, &encrypted_resp) {
@@ -102,6 +103,7 @@ func ProcessOp(request *Request) *Response {
 		server_resp = decryptServer(&encrypted_resp)
 	} else {
 		server_resp.S_Response.Uid = uid // set if returns fail
+		//fmt.Println("client 106 set uid to ", uid)
 	}
 	// i think this is correct
 	return &server_resp.S_Response

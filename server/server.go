@@ -69,6 +69,7 @@ func process(requestData NetworkData) NetworkData {
 	sev_response.Tod = request.Tod
 	sev_response.Client = request.Client
 	sev_response.Uid = request.Uid
+	//fmt.Println("server 72 set uid to ", sev_response.Uid)
 	sev_response.S_Response = *response
 	is_logout := request.Request.Op == LOGOUT
 	failed_changepass := (request.Request.Op == CHANGE_PASS) && (response.Status == FAIL)
@@ -85,6 +86,7 @@ func process(requestData NetworkData) NetworkData {
 func doOp(c_msg *Client_Message, response *Response, sk []byte) {
 	response.Status = FAIL
 	response.Uid = c_msg.Request.Uid
+	//fmt.Println("server 89 set uid to ", response.Uid)
 	if session_running {
 		switch c_msg.Request.Op {
 		case NOOP:
