@@ -60,7 +60,12 @@ func ProcessOp(request *Request) *Response {
 			enc_message := genEncryptedRequest(&client_msg, false)
 			doOp(enc_message, &encrypted_resp)
 		case LOGIN:
-			uid = request.Uid
+			if uid == "" {
+				uid = request.Uid
+			} else {
+				client_msg.Request.Uid = uid
+				client_msg.Uid = uid
+			}
 			sessionKey = crypto_utils.NewSessionKey()
 			client_msg.Request.Uid = uid
 			login_attempt++
@@ -92,6 +97,7 @@ func ProcessOp(request *Request) *Response {
 			return &server_resp.S_Response
 		}
 		server_resp = decryptServer(&encrypted_resp)
+		server_resp.S_Response.Uid = uid
 	}
 	// i think this is correct
 
