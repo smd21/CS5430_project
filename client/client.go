@@ -55,11 +55,25 @@ func ProcessOp(request *Request) *Response {
 			sessionKey = crypto_utils.NewSessionKey() // generate a one time key, we can store this here as a request will never again be validated
 			enc_message := genEncryptedRequest(&client_msg, true)
 			doOp(enc_message, &encrypted_resp)
-		case CREATE, DELETE, READ, WRITE, COPY, CHANGE_PASS:
+		case CREATE, DELETE, READ, WRITE, COPY:
 			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, false)
 			doOp(enc_message, &encrypted_resp)
+		case CHANGE_PASS:
+			client_msg.Request.Uid = uid
+			client_msg.Uid = uid
+			enc_message := genEncryptedRequest(&client_msg, false)
+			doOp(enc_message, &encrypted_resp)
+			if validateResponse(&client_msg, &encrypted_resp) {
+				server_resp = decryptServer(&encrypted_resp)
+				if server_resp.S_Response.Status == FAIL {
+					logged_in = false
+					uid = ""
+					sessionKey = nil
+					return &server_resp.S_Response
+				}
+			}
 		case LOGIN:
 			if uid == "" {
 				uid = request.Uid

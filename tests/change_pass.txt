@@ -1,0 +1,6 @@
+{"uid": "Serena", "op": "REGISTER", "pass": "password"}
+{"op":"LOGIN", "uid":"Serena", "pass": "password"}
+{"op": "CHANGE_PASS", "uid":"Serena", "old_pass": "wrongpassword", "new_pass": "pppassword"}
+{"op":"LOGOUT"}
+{"op":"LOGIN", "uid":"Serena", "pass": "password"}
+{"op":"LOGOUT"}

@@ -224,10 +224,12 @@ func doCHANGE_PASS(c_msg *Client_Message, response *Response) {
 		} else {
 			response.Status = FAIL // this deletes uid in session table like logout does
 			session_running = false
+
 		}
 	} else {
 		response.Status = FAIL
 		session_running = false
+
 	}
 
 }
