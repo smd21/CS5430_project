@@ -13,7 +13,7 @@ import (
 
 var name string
 var uid string
-var login_attempt int
+var logged_in bool
 var Requests chan NetworkData
 var Responses chan NetworkData
 
@@ -27,7 +27,7 @@ func init() {
 	Requests = make(chan NetworkData)
 	Responses = make(chan NetworkData)
 	uid = ""
-	login_attempt = 0
+	logged_in = false
 	clientSigPrivKey = crypto_utils.NewPrivateKey()
 	clientSigPubKey = &clientSigPrivKey.PublicKey
 }
@@ -68,23 +68,25 @@ func ProcessOp(request *Request) *Response {
 			}
 			sessionKey = crypto_utils.NewSessionKey()
 			client_msg.Request.Uid = uid
-			login_attempt++
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, true)
 			doOp(enc_message, &encrypted_resp)
+			if validateResponse(&client_msg, &encrypted_resp) {
+				server_resp = decryptServer(&encrypted_resp)
+				logged_in = server_resp.S_Response.Status != FAIL
+			}
 		case LOGOUT:
 			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, false)
 			doOp(enc_message, &encrypted_resp)
 			// authenticate, then delete session key
-			if !validateResponse(&client_msg, &encrypted_resp) {
-				return &server_resp.S_Response
+			if validateResponse(&client_msg, &encrypted_resp) {
+				server_resp = decryptServer(&encrypted_resp)
+				logged_in = false
+				uid = ""
+				sessionKey = nil
 			}
-			server_resp = decryptServer(&encrypted_resp)
-			login_attempt = 0
-			uid = ""
-			sessionKey = nil
 			return &server_resp.S_Response
 		default:
 			// struct already default initialized to
@@ -135,17 +137,17 @@ func validateRequest(r *Request) bool {
 	case REGISTER:
 		return r.Pass != "" // cannot register with an empty password
 	case CREATE, WRITE:
-		return r.Key != "" && r.Val != nil && login_attempt != 0
+		return r.Key != "" && r.Val != nil && logged_in
 	case DELETE, READ:
 		return r.Key != ""
 	case COPY:
-		return r.Dest_Key != "" && r.Source_Key != "" && login_attempt != 0
+		return r.Dest_Key != "" && r.Source_Key != "" && logged_in
 	case LOGIN:
-		if login_attempt == 0 {
+		if !logged_in {
 			return true
 		}
 	case LOGOUT:
-		if login_attempt == 1 {
+		if logged_in {
 			return true
 		}
 	case CHANGE_PASS:

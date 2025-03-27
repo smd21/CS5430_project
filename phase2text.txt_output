@@ -11,4 +11,4 @@ Output: {"status":"FAIL","val":null,"uid":""}
 Input: {"key":"","val":null,"op":"LOGIN","src_key":"","dst_key":"","uid":"Kevin","pass":"password","old_pass":"","new_pass":""}
 Output: {"status":"FAIL","val":null,"uid":"Kevin"}
 Input: {"key":"","val":null,"op":"LOGIN","src_key":"","dst_key":"","uid":"Kevin","pass":"newpassword","old_pass":"","new_pass":""}
-Output: {"status":"FAIL","val":null,"uid":""}
+Output: {"status":"OK","val":null,"uid":"Kevin"}
