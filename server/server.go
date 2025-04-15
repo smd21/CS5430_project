@@ -299,7 +299,7 @@ func genEncryptedResponse(response *Server_Message, is_logout bool, failed_chang
 	sig := crypto_utils.Sign(msg, privateKey)
 	m_sig, _ := json.Marshal(Signed_Server_Message{Msg: *response, Sig: sig})
 	var enc_m_sig []byte
-	if is_register {
+	if is_register || !session_running {
 		enc_m_sig = crypto_utils.EncryptSK(m_sig, register_key)
 	} else {
 		enc_m_sig = crypto_utils.EncryptSK(m_sig, binding_table[string(response.Client)].Shared_key)

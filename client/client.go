@@ -56,6 +56,9 @@ func ProcessOp(request *Request) *Response {
 			enc_message := genEncryptedRequest(&client_msg, true)
 			doOp(enc_message, &encrypted_resp)
 		case CREATE, DELETE, READ, WRITE, COPY:
+			if sessionKey == nil {
+				sessionKey = crypto_utils.NewSessionKey()
+			}
 			client_msg.Request.Uid = uid
 			client_msg.Uid = uid
 			enc_message := genEncryptedRequest(&client_msg, false)
@@ -185,7 +188,7 @@ func genEncryptedRequest(request *Client_Message, is_login_or_register bool) *En
 	m_sig_bytes, _ := json.Marshal(Signed_Client_Message{Msg: *request, Sig: sig})
 	enc_m_sig = crypto_utils.EncryptSK(m_sig_bytes, sessionKey)
 
-	if is_login_or_register {
+	if is_login_or_register || !logged_in {
 		enc_key := crypto_utils.EncryptPK(sessionKey, serverPublicKey)
 		enc_req = Encrypted_Request{Client: name, Enc_Signed_M: enc_m_sig, Enc_Shared_Key: enc_key}
 	} else {
