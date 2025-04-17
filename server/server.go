@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"os"
+	"slices"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/argon2"
@@ -128,10 +129,15 @@ func doOp(c_msg *Client_Message, response *Response, sk []byte) {
 // Input: src_key s, dest_key d. Returns a response.
 // Copies the value from key s over to key d
 func doCopy(request *Request, response *Response) {
-	if _, ok := kvstore[request.Source_Key]; ok {
-		if _, ok2 := kvstore[request.Dest_Key]; ok2 {
-			kvstore[request.Dest_Key] = kvstore[request.Source_Key]
-			response.Status = OK
+	if s, ok := kvstore[request.Source_Key]; ok {
+		if d, ok2 := kvstore[request.Dest_Key]; ok2 {
+			src_acl := generateACL(s, "c_src(k)")
+			dst_acl := generateACL(d, "c_dst(k)")
+			if slices.Contains(src_acl, request.Uid) && slices.Contains(dst_acl, request.Uid) {
+				d.Val = s.Val
+				kvstore[request.Dest_Key] = d
+				response.Status = OK
+			}
 		}
 	}
 }
@@ -153,9 +159,11 @@ func doCreate(request *Request, response *Response) {
 // key-value store. If key does not exist then take no
 // action.
 func doDelete(request *Request, response *Response) {
-	if _, ok := kvstore[request.Key]; ok {
-		delete(kvstore, request.Key)
-		response.Status = OK
+	if k, ok := kvstore[request.Key]; ok {
+		if request.Uid == k.Owner {
+			delete(kvstore, request.Key)
+			response.Status = OK
+		}
 	}
 }
 
@@ -163,9 +171,12 @@ func doDelete(request *Request, response *Response) {
 // associated with key. If key does not exist
 // then status is FAIL.
 func doReadVal(request *Request, response *Response) {
-	if v, ok := kvstore[request.Key]; ok {
-		response.Val = v.Val
-		response.Status = OK
+	if k, ok := kvstore[request.Key]; ok {
+		read_acl := generateACL(k, "r(k)")
+		if slices.Contains(read_acl, request.Uid) {
+			response.Val = k.Val
+			response.Status = OK
+		}
 	}
 }
 
@@ -174,21 +185,59 @@ func doReadVal(request *Request, response *Response) {
 // with key k to value v. If key does not exist
 // then status is FAIL.
 func doWriteVal(request *Request, response *Response) {
-	if _, ok := kvstore[request.Key]; ok {
-		k := kvstore[request.Key]
-		k.Val = request.Val
-		kvstore[request.Key] = k
-		// kvstore[request.Key] = request.Val
-		response.Status = OK
+	if k, ok := kvstore[request.Key]; ok {
+		write_acl := generateACL(k, "w(k)")
+		if slices.Contains(write_acl, request.Uid) {
+			k.Val = request.Val
+			kvstore[request.Key] = k
+			response.Status = OK
+		}
 	}
 }
 
-func doMODACL(request *Request, response *Response) {
+// new_key := Key_MetaData{Val: request.Val, Writers: request.Writers,
+// 	Readers: request.Readers, Copyfroms: request.Copyfroms, Copytos: request.Copytos,
+// 	Indirects: request.Indirects, Owner: request.Uid}
 
+func doMODACL(request *Request, response *Response) {
+	if k, ok := kvstore[request.Key]; ok {
+		if request.Uid == k.Owner {
+			if request.Writers != nil {
+				k.Writers = request.Writers
+			}
+			if request.Readers != nil {
+				k.Readers = request.Readers
+			}
+			if request.Copyfroms != nil {
+				k.Copyfroms = request.Copyfroms
+			}
+			if request.Copytos != nil {
+				k.Copytos = request.Copytos
+			}
+			if request.Indirects != nil {
+				k.Indirects = request.Indirects
+			}
+			kvstore[request.Key] = k
+			response.Status = OK
+		}
+	}
 }
 
 func doREVACL(request *Request, response *Response) {
-
+	if k, ok := kvstore[request.Key]; ok {
+		if request.Uid == k.Owner {
+			response.Status = OK
+			response.Writers = k.Writers
+			response.Readers = k.Readers
+			response.Copytos = k.Copytos
+			response.Copyfroms = k.Copyfroms
+			response.Indirects = k.Indirects
+			response.R_k = generateACL(k, "r(k)")
+			response.W_k = generateACL(k, "w(k)")
+			response.C_src_k = generateACL(k, "c_src(k)")
+			response.C_dst_k = generateACL(k, "c_dst(k)")
+		}
+	}
 }
 
 func doLOGIN(c_msg *Client_Message, response *Response, sk []byte) {
@@ -327,4 +376,8 @@ func genEncryptedResponse(response *Server_Message, is_logout bool, failed_chang
 		delete(binding_table, string(response.Client))
 	}
 	return &enc_res
+}
+
+func generateACL(k Key_MetaData, acl_type string) []string {
+	return []string{}
 }
