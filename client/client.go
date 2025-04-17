@@ -55,7 +55,7 @@ func ProcessOp(request *Request) *Response {
 			sessionKey = crypto_utils.NewSessionKey() // generate a one time key, we can store this here as a request will never again be validated
 			enc_message := genEncryptedRequest(&client_msg, true)
 			doOp(enc_message, &encrypted_resp)
-		case CREATE, DELETE, READ, WRITE, COPY:
+		case CREATE, DELETE, READ, WRITE, COPY, MODACL, REVACL:
 			if sessionKey == nil {
 				sessionKey = crypto_utils.NewSessionKey()
 			}
@@ -160,8 +160,8 @@ func validateRequest(r *Request) bool {
 		return r.Pass != "" && !logged_in // cannot register with an empty password
 	case CREATE, WRITE:
 		return r.Key != "" && r.Val != nil && logged_in
-	case DELETE, READ:
-		return r.Key != ""
+	case DELETE, READ, MODACL, REVACL:
+		return r.Key != "" && logged_in
 	case COPY:
 		return r.Dest_Key != "" && r.Source_Key != "" && logged_in
 	case LOGIN:

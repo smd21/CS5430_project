@@ -18,7 +18,7 @@ var privateKey *rsa.PrivateKey
 var publicKey *rsa.PublicKey
 
 var name string
-var kvstore map[string]interface{}
+var kvstore map[string]Key_MetaData // maps Key to Key_Metadata struct
 var Requests chan NetworkData
 var Responses chan NetworkData
 
@@ -37,7 +37,7 @@ func init() {
 
 	name = uuid.NewString()
 	session_running = false
-	kvstore = make(map[string]interface{})
+	kvstore = make(map[string]Key_MetaData)
 	Requests = make(chan NetworkData)
 	Responses = make(chan NetworkData)
 	binding_table = make(map[string]Binding_Table_Entry)
@@ -105,6 +105,10 @@ func doOp(c_msg *Client_Message, response *Response, sk []byte) {
 			doLOGOUT(c_msg, response)
 		case CHANGE_PASS:
 			doCHANGE_PASS(c_msg, response)
+		case MODACL:
+			doMODACL(&c_msg.Request, response)
+		case REVACL:
+			doREVACL(&c_msg.Request, response)
 
 		default: //LOGIN, REGISTER will fall through to fail
 			// struct already default initialized to
@@ -137,7 +141,10 @@ func doCopy(request *Request, response *Response) {
 // key-value store to value v and metavalue m.
 func doCreate(request *Request, response *Response) {
 	if _, ok := kvstore[request.Key]; !ok {
-		kvstore[request.Key] = request.Val
+		new_key := Key_MetaData{Val: request.Val, Writers: request.Writers,
+			Readers: request.Readers, Copyfroms: request.Copyfroms, Copytos: request.Copytos,
+			Indirects: request.Indirects, Owner: request.Uid}
+		kvstore[request.Key] = new_key
 		response.Status = OK
 	}
 }
@@ -157,7 +164,7 @@ func doDelete(request *Request, response *Response) {
 // then status is FAIL.
 func doReadVal(request *Request, response *Response) {
 	if v, ok := kvstore[request.Key]; ok {
-		response.Val = v
+		response.Val = v.Val
 		response.Status = OK
 	}
 }
@@ -168,9 +175,20 @@ func doReadVal(request *Request, response *Response) {
 // then status is FAIL.
 func doWriteVal(request *Request, response *Response) {
 	if _, ok := kvstore[request.Key]; ok {
-		kvstore[request.Key] = request.Val
+		k := kvstore[request.Key]
+		k.Val = request.Val
+		kvstore[request.Key] = k
+		// kvstore[request.Key] = request.Val
 		response.Status = OK
 	}
+}
+
+func doMODACL(request *Request, response *Response) {
+
+}
+
+func doREVACL(request *Request, response *Response) {
+
 }
 
 func doLOGIN(c_msg *Client_Message, response *Response, sk []byte) {
