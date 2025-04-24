@@ -379,5 +379,36 @@ func genEncryptedResponse(response *Server_Message, is_logout bool, failed_chang
 }
 
 func generateACL(k Key_MetaData, acl_type string) []string {
-	return []string{}
+	var direct []string
+
+	switch acl_type {
+	case "r(k)":
+		direct = k.Readers
+	case "w(k)":
+		direct = k.Writers
+	case "c_dst(k)":
+		direct = k.Copytos
+	case "c_src(k)":
+		direct = k.Copyfroms
+	}
+	acl_result := make(map[string]int)
+	for _, principal := range direct {
+		acl_result[principal] = 0
+	}
+
+	for _, i_key := range k.Indirects {
+		i_key_metadata, _ := kvstore[i_key]
+		i_principals := generateACL(i_key_metadata, acl_type)
+		for _, principal := range i_principals {
+			acl_result[principal] = 0 //no op if already exists
+		}
+	}
+
+	keys := make([]string, len(acl_result))
+	i := 0
+	for k := range acl_result {
+		keys[i] = k
+		i++
+	}
+	return keys
 }
