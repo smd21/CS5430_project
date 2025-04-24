@@ -387,21 +387,17 @@ func genEncryptedResponse(response *Server_Message, is_logout bool, failed_chang
 	return &enc_res
 }
 
-<<<<<<< HEAD
 func generateACL(k Key_MetaData, acl_type Acl_Types) []string {
-	return []string{}
-=======
-func generateACL(k Key_MetaData, acl_type string) []string {
 	var direct []string
 
 	switch acl_type {
-	case "r(k)":
+	case ACL_R:
 		direct = k.Readers
-	case "w(k)":
+	case ACL_W:
 		direct = k.Writers
-	case "c_dst(k)":
+	case ACL_C_Dest:
 		direct = k.Copytos
-	case "c_src(k)":
+	case ACL_C_Src:
 		direct = k.Copyfroms
 	}
 	acl_result := make(map[string]int)
@@ -424,5 +420,4 @@ func generateACL(k Key_MetaData, acl_type string) []string {
 		i++
 	}
 	return keys
->>>>>>> f85f7edcbc17a79d3477c08c142a274f77ca1b9c
 }
