@@ -28,6 +28,15 @@ var binding_table map[string]Binding_Table_Entry   // maps Client to associated 
 var password_table map[string]Password_Table_Entry // maps uid to associated entry in password table
 var sev_response Server_Message
 
+type Acl_Types int
+
+const (
+	ACL_R Acl_Types = iota
+	ACL_C_Dest
+	ACL_C_Src
+	ACL_W
+)
+
 func init() {
 	privateKey = crypto_utils.NewPrivateKey()
 	publicKey = &privateKey.PublicKey
@@ -131,8 +140,8 @@ func doOp(c_msg *Client_Message, response *Response, sk []byte) {
 func doCopy(request *Request, response *Response) {
 	if s, ok := kvstore[request.Source_Key]; ok {
 		if d, ok2 := kvstore[request.Dest_Key]; ok2 {
-			src_acl := generateACL(s, "c_src(k)")
-			dst_acl := generateACL(d, "c_dst(k)")
+			src_acl := generateACL(s, ACL_C_Src)
+			dst_acl := generateACL(d, ACL_C_Dest)
 			if slices.Contains(src_acl, request.Uid) && slices.Contains(dst_acl, request.Uid) {
 				d.Val = s.Val
 				kvstore[request.Dest_Key] = d
@@ -172,7 +181,7 @@ func doDelete(request *Request, response *Response) {
 // then status is FAIL.
 func doReadVal(request *Request, response *Response) {
 	if k, ok := kvstore[request.Key]; ok {
-		read_acl := generateACL(k, "r(k)")
+		read_acl := generateACL(k, ACL_R)
 		if slices.Contains(read_acl, request.Uid) {
 			response.Val = k.Val
 			response.Status = OK
@@ -186,7 +195,7 @@ func doReadVal(request *Request, response *Response) {
 // then status is FAIL.
 func doWriteVal(request *Request, response *Response) {
 	if k, ok := kvstore[request.Key]; ok {
-		write_acl := generateACL(k, "w(k)")
+		write_acl := generateACL(k, ACL_W)
 		if slices.Contains(write_acl, request.Uid) {
 			k.Val = request.Val
 			kvstore[request.Key] = k
@@ -232,10 +241,10 @@ func doREVACL(request *Request, response *Response) {
 			response.Copytos = k.Copytos
 			response.Copyfroms = k.Copyfroms
 			response.Indirects = k.Indirects
-			response.R_k = generateACL(k, "r(k)")
-			response.W_k = generateACL(k, "w(k)")
-			response.C_src_k = generateACL(k, "c_src(k)")
-			response.C_dst_k = generateACL(k, "c_dst(k)")
+			response.R_k = generateACL(k, ACL_R)
+			response.W_k = generateACL(k, ACL_W)
+			response.C_src_k = generateACL(k, ACL_C_Src)
+			response.C_dst_k = generateACL(k, ACL_C_Dest)
 		}
 	}
 }
@@ -271,7 +280,7 @@ func doRegister(c_msg *Client_Message, response *Response) {
 	}
 }
 
-func doLOGOUT(c_msg *Client_Message, response *Response) {
+func doLOGOUT(_c_msg *Client_Message, response *Response) {
 	session_running = false
 	response.Status = OK
 }
@@ -378,6 +387,6 @@ func genEncryptedResponse(response *Server_Message, is_logout bool, failed_chang
 	return &enc_res
 }
 
-func generateACL(k Key_MetaData, acl_type string) []string {
+func generateACL(k Key_MetaData, acl_type Acl_Types) []string {
 	return []string{}
 }
