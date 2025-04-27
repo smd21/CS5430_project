@@ -1,0 +1,13 @@
+{"uid": "Serena", "op": "REGISTER", "pass": "p"}
+{"uid": "Mika", "op": "REGISTER", "pass": "p"}
+{"uid": "Marcus", "op": "REGISTER", "pass": "p"}
+{"uid": "Fred", "op": "REGISTER", "pass": "p"}
+
+{"op":"LOGIN", "uid":"Serena", "pass": "p"}
+{"op":"CREATE","key":"A", "val":"1", "readers":["Mika"], "writers":["Fred", "Mika"], "copytos":["Marcus"], "copyfroms":["Marcus", "Mika"], "indirects": ["B"]}
+{"op":"CREATE","key":"B", "val":"200", "readers":["Fred", "Mika", "Marcus"], "writers":["Fred", "Mika"], "copytos":["Marcus", "Mika"]}
+{"op":"CREATE","key":"C", "val":"10", "indirects": ["A"]}
+{"op":"LOGOUT"}
+
+{"op":"LOGIN", "uid":"Fred", "pass":"p"}
+{"op":"READ", "key":"C"}

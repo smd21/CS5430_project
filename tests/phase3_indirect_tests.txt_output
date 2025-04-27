@@ -1,0 +1,24 @@
+Input: {"key":"","val":null,"op":"REGISTER","src_key":"","dst_key":"","uid":"Serena","pass":"p","old_pass":"","new_pass":"","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null}
+Output: {"status":"OK","val":null,"uid":"Serena","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}
+Input: {"key":"","val":null,"op":"REGISTER","src_key":"","dst_key":"","uid":"Mika","pass":"p","old_pass":"","new_pass":"","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null}
+Output: {"status":"OK","val":null,"uid":"Mika","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}
+Input: {"key":"","val":null,"op":"REGISTER","src_key":"","dst_key":"","uid":"Marcus","pass":"p","old_pass":"","new_pass":"","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null}
+Output: {"status":"OK","val":null,"uid":"Marcus","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}
+Input: {"key":"","val":null,"op":"REGISTER","src_key":"","dst_key":"","uid":"Fred","pass":"p","old_pass":"","new_pass":"","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null}
+Output: {"status":"OK","val":null,"uid":"Fred","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}
+Input: {"key":"","val":null,"op":"LOGIN","src_key":"","dst_key":"","uid":"Serena","pass":"p","old_pass":"","new_pass":"","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null}
+Output: {"status":"OK","val":null,"uid":"Serena","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}
+
+Input: {"key":"A","val":"1","op":"CREATE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":"","writers":["Fred","Mika"],"readers":["Mika"],"copyfroms":["Marcus","Mika"],"copytos":["Marcus"],"indirects":["B"]}
+Output: {"status":"OK","val":null,"uid":"Serena","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}
+Input: {"key":"B","val":"200","op":"CREATE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":"","writers":["Fred","Mika"],"readers":["Fred","Mika","Marcus"],"copyfroms":null,"copytos":["Marcus","Mika"],"indirects":null}
+Output: {"status":"OK","val":null,"uid":"Serena","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}
+Input: {"key":"C","val":"10","op":"CREATE","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":"","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":["A"]}
+Output: {"status":"OK","val":null,"uid":"Serena","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}
+Input: {"key":"","val":null,"op":"LOGOUT","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":"","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null}
+Output: {"status":"OK","val":null,"uid":"Serena","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}
+
+Input: {"key":"","val":null,"op":"LOGIN","src_key":"","dst_key":"","uid":"Fred","pass":"p","old_pass":"","new_pass":"","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null}
+Output: {"status":"OK","val":null,"uid":"Fred","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}
+Input: {"key":"C","val":null,"op":"READ","src_key":"","dst_key":"","uid":"","pass":"","old_pass":"","new_pass":"","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null}
+Output: {"status":"OK","val":"10","uid":"Fred","writers":null,"readers":null,"copyfroms":null,"copytos":null,"indirects":null,"r(k)":null,"w(k)":null,"c_src(k)":null,"c_dst(k)":null}

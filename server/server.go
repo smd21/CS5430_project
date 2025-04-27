@@ -388,6 +388,11 @@ func genEncryptedResponse(response *Server_Message, is_logout bool, failed_chang
 }
 
 func generateACL(k Key_MetaData, acl_type Acl_Types) []string {
+	mem := make(map[string]map[string]int)
+	return generateACL_helper(k, acl_type, mem)
+}
+
+func generateACL_helper(k Key_MetaData, acl_type Acl_Types, mem map[string]map[string]int) []string {
 	var direct []string
 
 	switch acl_type {
@@ -401,15 +406,26 @@ func generateACL(k Key_MetaData, acl_type Acl_Types) []string {
 		direct = k.Copyfroms
 	}
 	acl_result := make(map[string]int)
+
 	for _, principal := range direct {
 		acl_result[principal] = 0
 	}
 
 	for _, i_key := range k.Indirects {
-		i_key_metadata, _ := kvstore[i_key]
-		i_principals := generateACL(i_key_metadata, acl_type)
-		for _, principal := range i_principals {
-			acl_result[principal] = 0 //no op if already exists
+		if computed, ok := mem[i_key]; ok {
+			for principal := range computed {
+				acl_result[principal] = 0
+			}
+		} else {
+			i_key_metadata, ok := kvstore[i_key]
+			if ok {
+				i_principals := generateACL_helper(i_key_metadata, acl_type, mem)
+				mem[i_key] = make(map[string]int)
+				for _, principal := range i_principals {
+					mem[i_key][principal] = 0
+					acl_result[principal] = 0 //no op if already exists
+				}
+			}
 		}
 	}
 
