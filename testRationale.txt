@@ -1,3 +1,118 @@
+Phase 3 Testing:
+The first part of phase three testing involved testing our functionality from phase 0, 1, and 2.
+This involved testing all the functionality described below. To do this we used the 
+test cases used to grade our phase 2, but extended them to include the correct permissions
+for keys when created to ensure the outputs desired outputs remained the same, since phases 0-2 
+had nothing to do with access control lists. Next, we tested the functionality of our code
+from directly listed users in the access control lists "readers", "writers", "copyfroms",
+and "copytos". Additionally, the initial tests tested the functionality of MODACL and REVACL
+to ensure access control lists were updated and revealed as desired. The next part 
+of our testing for phase 3 involved testing to make sure keys listed in the indirects
+field allowed for correct authorization as described in the instruction document. 
+
+The tests for direct functionality is as follows:
+1. Registering users to use for testing, should all return OK
+{"uid": "Serena", "op": "REGISTER", "pass": "p"} 
+{"uid": "Mika", "op": "REGISTER", "pass": "p"} 
+{"uid": "Marcus", "op": "REGISTER", "pass": "p"} 
+{"uid": "Fred", "op": "REGISTER", "pass": "p"} 
+
+2. Creating keys to use for testing under owner "Serena", should all return OK
+{"op":"LOGIN", "uid":"Serena", "pass": "p"}
+{"op":"CREATE","key":"A", "val":"1", "readers":["Fred", "Mika"], "writers":["Fred", "Mika"], "copytos":["Marcus"], "copyfroms":["Marcus", "Mika"]}
+{"op":"CREATE","key":"B", "val":"200", "readers":["Fred", "Mika", "Marcus"], "writers":["Fred", "Mika"], "copytos":["Marcus", "Mika"]}
+{"op":"CREATE","key":"C", "val":"10", "readers":["Fred"],"writers":["Fred", "Mika"]}
+{"op":"LOGOUT"}
+
+3. Testing under user "Marcus", checks for correct authorization of "readers" and "writers"
+{"op":"LOGIN", "uid":"Marcus", "pass": "p"} // OK
+{"op":"READ", "key":"A"} // FAIL
+{"op":"READ", "key":"B"} // OK, return val = "200"
+{"op":"WRITE", "key":"A", "val":"3"} // FAIL
+{"op":"LOGOUT"} // OK
+
+4. Testing under user "Fred", checks for ownership of key for use of "REVACL"
+{"op":"LOGIN", "uid":"Fred", "pass":"p"} // OK
+{"op":"READ", "key":"A"} // OK, return val = "1"
+{"op":"WRITE", "key":"A", "val":"2"} // OK
+{"op":"REVACL", "key":"A"} // FAIL
+{"op":"LOGOUT"} // OK
+
+5. Testing under user "Serena", checks for ownership of key for use of "REVACL" and "MODACL", and correct functionality of "MODACL"
+{"op":"LOGIN", "uid":"Serena", "pass": "p"} // OK
+{"op":"REVACL", "key":"A"} // OK, return readers = ["Fred", "Mika"], writers = ["Fred", "Mika"], copytos = ["Marcus"], copyfroms = ["Marcus", "Mika"], r(k) = ["Fred", "Mika"], w(k) = ["Fred", "Mika"], c_src(k) = ["Marcus", "Mika"], c_dst(k) = ["Marcus"]
+{"op":"MODACL", "key":"A", "readers":["Fred", "Marcus"]} // OK
+{"op":"REVACL", "key":"A"} // OK, return readers = ["Fred", "Marcus"], writers = ["Fred", "Mika"], copytos = ["Marcus"], copyfroms = ["Marcus", "Mika"], r(k) = ["Fred", "Marcus"], w(k) = ["Fred", "Mika"], c_src(k) = ["Marcus", "Mika"], c_dst(k) = ["Marcus"]
+{"op":"DELETE", "key":"C"} // OK
+{"op":"LOGOUT"} // OK
+
+6. Testing under user "Marcus", checks to make sure the "MODACL" function now allows "Marcus" read access
+{"op":"LOGIN", "uid":"Marcus", "pass": "p"} // OK
+{"op":"READ", "key":"A"} // OK, return val = "2"
+{"op":"READ", "key":"B"} // OK, return val = "200"
+{"op":"WRITE", "key":"A", "val":"3"} // FAIL
+{"op":"LOGOUT"} // OK
+
+7. Testing under user "Mika", checks for correct authorization of "copyfroms" and "copytos" and checks for ownership of key for use of "DELETE"
+{"op":"LOGIN", "uid":"Mika", "pass": "p"} // OK
+{"op":"READ", "key":"A"} // FAIL
+{"op":"READ", "key":"B"} // Ok, return val = "200"
+{"op":"COPY", "src_key": "B", "dst_key":"A"} // FAIL
+{"op":"COPY", "src_key": "A", "dst_key":"B"} // OK
+{"op":"READ", "key":"A"} // FAIL
+{"op":"READ", "key":"B"} // OK, return val = "2"
+{"op":"MODACL", "key":"A", "readers":["Fred", "Marcus"]} // FAIL
+{"op": "DELETE", "key":"A"} // FAIL
+{"op": "WRITE", "key":"C", "val": "3"} // FAIL
+{"op":"LOGOUT"} // OK
+
+
+The tests for indirect funcitonality is as follows:
+1. Registering users to use for testing, should all return OK
+{"uid": "Serena", "op": "REGISTER", "pass": "p"}
+{"uid": "Mika", "op": "REGISTER", "pass": "p"}
+{"uid": "Marcus", "op": "REGISTER", "pass": "p"}
+{"uid": "Fred", "op": "REGISTER", "pass": "p"}
+
+2. Registering keys to use for future testing and making sure indirects return correct r(k), w(k), c_src(k), and c_dst(k)
+{"op":"LOGIN", "uid":"Serena", "pass": "p"} // OK
+{"op":"CREATE","key":"A", "val":"1", "indirects": ["B"]} // OK
+{"op":"CREATE","key":"B", "val":"200", "readers":["Fred", "Mika"], "writers":["Fred"], "copytos":["Marcus", "Mika"], "copyfroms": ["Mika"]} // OK
+{"op":"CREATE","key":"C", "val":"10", "indirects": ["A"]} // OK
+{"op":"REVACL", "key":"A"} // OK, returns readers = [], writers = [], copytos = [], copyfroms = [], r(k) = ["Fred", "Mika"], w(k) = ["Fred"], c_src(k) = ["Mika"], c_dst(k) = ["Marcus", "Mika"]
+{"op":"REVACL", "key":"B"} // OK, returns readers = ["Fred", "Mika"], writers = ["Fred"], copytos = ["Marcus", "Mika"], copyfroms = ["Mika"], r(k) = ["Fred", "Mika"], w(k) = ["Fred"], c_src(k) = ["Mika"], c_dst(k) = ["Marcus", "Mika"]
+{"op":"REVACL", "key":"C"} // OK, returns readers = [], writers = [], copytos = [], copyfroms = [], r(k) = ["Fred", "Mika"], w(k) = ["Fred"], c_src(k) = ["Mika"], c_dst(k) = ["Marcus", "Mika"]
+{"op":"LOGOUT"} // OK
+
+3. Testing as user "Fred" for authorized usage of reads and writes through indirects
+{"op":"LOGIN", "uid":"Fred", "pass":"p"} // OK
+{"op":"READ", "key":"C"} // OK, returns val = "10"
+{"op":"READ", "key":"A"} // OK, returns val = "1"
+{"op":"READ", "key":"B"} // OK, returns val = "200"
+{"op":"WRITE", "key":"A", "val":"3"} // OK
+{"op":"WRITE", "key":"B", "val":"2"} // OK
+{"op":"WRITE", "key":"C", "val":"1"} // OK
+{"op":"COPY", "src_key": "A", "dst_key":"B"} // FAIL
+{"op":"LOGOUT"} // OK
+
+4. Testing as user "Mika" for authorized usage of copy through indirects
+{"op":"LOGIN", "uid":"Mika", "pass":"p"} // OK
+{"op":"COPY", "src_key": "A", "dst_key":"B"} // OK
+{"op":"COPY", "src_key": "B", "dst_key":"C"} // OK
+{"op":"READ", "key":"C"} // OK, returns val = "3"
+{"op":"READ", "key":"B"} // OK, returns val = "3"
+{"op":"LOGOUT"} // OK
+
+5. Testing as user "Serena" to break indirect chain from key "C" to key "B", and to ensure indirect chain from key "A" to key "B" updates with MODACL of key "B" 
+{"op":"LOGIN", "uid":"Serena", "pass": "p"} // OK
+{"op":"MODACL", "key":"C", "indirects": []} // OK
+{"op":"MODACL", "key":"B", "readers":["Serena"]} // OK
+{"op":"REVACL", "key":"A"} // OK, returns readers = [], writers = [], copytos = [], copyfroms = [], r(k) = ["Serena"], w(k) = ["Fred"], c_src(k) = ["Mika"], c_dst(k) = ["Marcus", "Mika"]
+{"op":"REVACL", "key":"B"} // OK, returns readers = ["Serena"], writers = ["Fred"], copytos = ["Marcus", "Mika"], copyfroms = ["Mika"], r(k) = ["Serena"], w(k) = ["Fred"], c_src(k) = ["Mika"], c_dst(k) = ["Marcus", "Mika"]
+{"op":"REVACL", "key":"C"} // OK, returns readers = [], writers = [], copytos = [], copyfroms = [], r(k) = [], w(k) = [], c_src(k) = [], c_dst(k) = []
+{"op":"LOGOUT"} // OK
+
+
 Phase 2 Testing:
 Our testing for phase two built off of the work we did in the previous parts. First,
 we created a series of unit tests that explored all functionality of the new requests.

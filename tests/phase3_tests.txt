@@ -25,6 +25,7 @@
 {"op":"REVACL", "key":"A"}
 {"op":"MODACL", "key":"A", "readers":["Fred", "Marcus"]}
 {"op":"REVACL", "key":"A"}
+{"op":"DELETE", "key":"C"}
 {"op":"LOGOUT"}
 
 {"op":"LOGIN", "uid":"Marcus", "pass": "p"}
@@ -40,4 +41,7 @@
 {"op":"COPY", "src_key": "A", "dst_key":"B"}
 {"op":"READ", "key":"A"}
 {"op":"READ", "key":"B"}
+{"op":"MODACL", "key":"A", "readers":["Fred", "Marcus"]}
+{"op": "DELETE", "key":"A"}
+{"op": "WRITE", "key":"C", "val": "3"}
 {"op":"LOGOUT"}

@@ -4,10 +4,38 @@
 {"uid": "Fred", "op": "REGISTER", "pass": "p"}
 
 {"op":"LOGIN", "uid":"Serena", "pass": "p"}
-{"op":"CREATE","key":"A", "val":"1", "readers":["Mika"], "writers":["Fred", "Mika"], "copytos":["Marcus"], "copyfroms":["Marcus", "Mika"], "indirects": ["B"]}
-{"op":"CREATE","key":"B", "val":"200", "readers":["Fred", "Mika", "Marcus"], "writers":["Fred", "Mika"], "copytos":["Marcus", "Mika"]}
+{"op":"CREATE","key":"A", "val":"1", "indirects": ["B"]}
+{"op":"CREATE","key":"B", "val":"200", "readers":["Fred", "Mika"], "writers":["Fred"], "copytos":["Marcus", "Mika"], "copyfroms": ["Mika"]}
 {"op":"CREATE","key":"C", "val":"10", "indirects": ["A"]}
+{"op":"REVACL", "key":"A"}
+{"op":"REVACL", "key":"B"}
+{"op":"REVACL", "key":"C"}
 {"op":"LOGOUT"}
 
 {"op":"LOGIN", "uid":"Fred", "pass":"p"}
 {"op":"READ", "key":"C"}
+{"op":"READ", "key":"A"}
+{"op":"READ", "key":"B"}
+{"op":"WRITE", "key":"A", "val":"3"}
+{"op":"WRITE", "key":"B", "val":"2"}
+{"op":"WRITE", "key":"C", "val":"1"}
+{"op":"COPY", "src_key": "A", "dst_key":"B"}
+{"op":"LOGOUT"}
+
+{"op":"LOGIN", "uid":"Mika", "pass":"p"}
+{"op":"COPY", "src_key": "A", "dst_key":"B"}
+{"op":"COPY", "src_key": "B", "dst_key":"C"}
+{"op":"READ", "key":"C"}
+{"op":"READ", "key":"B"}
+{"op":"LOGOUT"}
+
+{"op":"LOGIN", "uid":"Serena", "pass": "p"}
+{"op":"MODACL", "key":"C", "indirects": []}
+{"op":"MODACL", "key":"B", "readers":["Serena"]}
+{"op":"REVACL", "key":"A"}
+{"op":"REVACL", "key":"B"}
+{"op":"REVACL", "key":"C"}
+{"op":"LOGOUT"}
+
+
+
